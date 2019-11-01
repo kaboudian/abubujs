@@ -13,9 +13,9 @@
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.1.04' ;
+var version = 'V6.1.05' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Sat 28 Sep 2019 11:22:45 (EDT)' ;
+var updateTime = 'Fri 01 Nov 2019 13:00:12 (EDT)' ;
 
 var log         = console.log ;
 var warn        = console.warn ;
@@ -5299,7 +5299,7 @@ class Plot2D{
  *------------------------------------------------------------------------
  */
     setMaxValue (val){
-        this.minValue = readOption(this.minValue, val) ;
+        this.maxValue = readOption(val, this.maxValue) ;
     }
 
 /*------------------------------------------------------------------------
