@@ -2,7 +2,7 @@
  * Abubu.js     :   library for computational work
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Sat 28 Sep 2019 11:22:51 (EDT)
+ * DATE         :   Wed 25 Mar 2020 18:46:49 (EDT)
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
@@ -13,9 +13,9 @@
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.1.05' ;
+var version = 'V6.1.06' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Fri 01 Nov 2019 13:00:12 (EDT)' ;
+var updateTime = 'Wed 25 Mar 2020 18:47:07 (EDT)' ;
 
 var log         = console.log ;
 var warn        = console.warn ;
@@ -8210,7 +8210,7 @@ class Storage{
 	t[0] ^= s[0];
 	t[0] ^= s[0] << 4;	
 	randomState[0] = t[0];
-        randomState[4] += 362437
+        randomState[4] += 362437 ;
         s[0] =  t[0] + randomState[4] ;
 	return s[0];
     }
