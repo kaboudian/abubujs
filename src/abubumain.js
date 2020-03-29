@@ -2,7 +2,7 @@
  * Abubu.js     :   library for computational work
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Wed 25 Mar 2020 18:46:49 (EDT)
+ * DATE         :   Sun 29 Mar 2020 14:00:22 (EDT)
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
@@ -13,9 +13,9 @@
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.1.06' ;
+var version = 'V6.2.00' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Wed 25 Mar 2020 18:47:07 (EDT)' ;
+var updateTime = 'Sun 29 Mar 2020 14:00:38 (EDT)' ;
 
 var log         = console.log ;
 var warn        = console.warn ;
@@ -8187,6 +8187,7 @@ class Storage{
 
         link.dispatchEvent(clickEvent) ;
     }
+
 /*========================================================================
  * xorwow   : creates a random integer between 0 and (2^32-1)
  *========================================================================
@@ -8222,6 +8223,187 @@ class Storage{
     function random(){
         return xorwow()/4294967295.0 ;
     }
+
+
+/*========================================================================
+ * TinyMT (Tiny Mersenne Twister) : A random number generator that can be
+ * initialized using 3 values to create unique streams. Additionally, a
+ * seed value can be used to uniformly initialize the processors.
+ *
+ * Usage : var tmt = new TinyMT(options) ;
+ *
+ * Options 
+ * -------
+ *      mat1  (default = 0)     : first  id
+ *      mat2  (default = 0)     : second id
+ *      tmat  (default = 0)     : tempering number
+ *      seed  (default = 0)     : seed number for the generator
+ *  
+ *========================================================================
+ */ 
+class TinyMT{
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *  CONSTRUCTOR BEGINS
+ *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+    constructor(opts={}){
+        // constants .....................................................
+        this._MEXP      = 127 ;
+        this._SH0       = 1 ;
+        this._SH1       = 10 ;
+        this._SH8       = 8 ;
+        this._MASK      = 0x7fffffff ;
+        this._MIN_LOOP  = 8 ;
+        this._PRE_LOOP  = 8 ;
+
+        // creating the unsigned variables ...............................
+        this._state = new Uint32Array(4) ;
+        this._mat   = new Uint32Array(4) ;
+
+        // reading options ...............................................
+        this._mat[0] = readOption(opts.mat1 , 0 ) ;
+        this._mat[1] = readOption(opts.mat2 , 0 ) ;
+        this._mat[2] = readOption(opts.tmat , 0 ) ;
+        this._mat[3] = readOption(opts.seed , 0 ) ;
+        this._linearityCheck = readOption( opts.linearityCheck, false) ;
+
+        this.init() ;
+    } // end of constructor ----------------------------------------------
+
+/*------------------------------------------------------------------------
+ * Getters and setters
+ *------------------------------------------------------------------------
+ */
+    // getter only for constants and read-only variables ~~~~~~~~~~~~~~~~~
+    get MEXP    (){ return this._MEXP       ; } 
+    get SH0     (){ return this._SH0        ; }
+    get SH1     (){ return this._SH1        ; }
+    get SH8     (){ return this._SH8        ; }
+    get MASK    (){ return this._MASK       ; }
+    get MIN_LOOP(){ return this._MIN_LOOP   ; }
+    get PRE_LOOP(){ return this._PRE_LOOP   ; }
+    get state   (){ return this._state      ; }
+    get mat     (){ return this._mat        ; }
+
+    get mat1(){
+        return this.mat[0] ;
+    }
+    set mat1(val){
+        this.mat[0] = readOption(val, this._mat[0] ) ;
+        this.init() ;
+    }
+
+    get mat2(){
+        return this.mat[1] ;
+    }
+    set mat2(val){
+        this.mat[1] = readOption(val, this.mat2) ;
+        this.init() ;
+    }
+
+    get tmat(){
+        return this.mat[2] ;
+    }
+    set tmat(v){
+        this.mat[2] = readOptions(v, this.tmat) ;
+        this.init() ;
+    }
+
+    get seed(){
+        return this.mat[3] ;
+    }
+    set seed(v){
+        this.mat[3] = readOptions(v, this.seed) ;
+        this.init() ;
+    }
+
+
+    get linearityCheck(){
+        return this._linearityCheck ;
+    }
+    set linearityCheck(v){
+        this._linearityCheck = v ;
+        this.init() ;
+    }
+
+/*------------------------------------------------------------------------
+ * iterate to the next state 
+ *------------------------------------------------------------------------
+ */
+    nextState(){
+        let y = this.state[3];
+        let x = (this.state[0] & this.MASK)
+            ^ this.state[1]
+            ^ this.state[2];
+        x ^= (x << this.SH0);
+        y ^= (y >>> this.SH0) ^ x;
+        this.state[0] = this.state[1];
+        this.state[1] = this.state[2];
+        this.state[2] = x ^ (y << this.SH1);
+        this.state[3] = y;
+        this.state[1] ^= (-(y & 1)>>>0) & this.mat1;
+        this.state[2] ^= (-(y & 1)>>>0) & this.mat2;
+    }
+    
+/*------------------------------------------------------------------------
+ * initialize the generator
+ *------------------------------------------------------------------------
+ */
+    init() {
+        this.state[0] = this.seed ;
+        this.state[1] = this.mat1 ;
+        this.state[2] = this.mat2 ;
+        this.state[3] = this.tmat ;
+        for (let i = 1; i < this.MIN_LOOP; i++) {
+            const  a = i & 3 ;
+            const  b = (i-1) & 3 ;
+            this.state[a] ^= i + Math.imul(1812433253,
+                 (this.state[b]
+                   ^ (this.state[b] >>> 30)));
+        }
+
+        for (let i = 0; i < this.PRE_LOOP; i++) {
+            this.nextState();
+        }
+    }
+
+/*------------------------------------------------------------------------
+ * temper : temper the output by breaking F_2 linearity
+ *------------------------------------------------------------------------
+ */
+    temper(){
+        let t0 = new Uint32Array(1) ;
+        let t1 = new Uint32Array(1) ;
+        t0[0] = this.state[3];
+        if (this.linearityCheck){
+            t1[0] = this.state[0] ^ (this.state[2] >>> this.SH8);
+        }else{
+            t1[0] = this.state[0] + (this.state[2] >>> this.SH8);
+        }
+
+        t0[0] ^= t1[0] ;
+        t0[0] ^= (-(t1[0] & 1)>>>0) & this.tmat;
+        return t0[0] ;
+    }
+
+/*------------------------------------------------------------------------
+ * randomUint32: generate an Uint32 random number
+ *------------------------------------------------------------------------
+ */
+    randomUint32(){
+        this.nextState() ;
+        return this.temper() ;
+    }
+
+/*------------------------------------------------------------------------
+ * randomFloat: generate a float random number between 0 and 1 
+ *------------------------------------------------------------------------
+ */
+    randomFloat(){
+        return (this.randomUint32())/4294967295. ;
+    }
+}
+
 
 /*=========================================================================
  * loadFromXML :
@@ -9159,6 +9341,7 @@ this.TextReader      = TextReader ;
 this.TextWriter      = TextWriter ;
 this.xorwow          = xorwow ;
 this.random          = random ;
+this.TinyMT          = TinyMT ;
 
 this.Gui             = Gui ;
 this.MouseListener   = MouseListener ;
