@@ -2,7 +2,7 @@
  * Abubu.js     :   library for computational work
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Sun 29 Mar 2020 14:00:22 (EDT)
+ * DATE         :   Mon 30 Mar 2020 17:39:13 (EDT)
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
@@ -13,9 +13,9 @@
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.2.00' ;
+var version = 'V6.3.01' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Sun 29 Mar 2020 14:00:38 (EDT)' ;
+var updateTime = 'Mon 30 Mar 2020 17:39:18 (EDT)' ;
 
 var log         = console.log ;
 var warn        = console.warn ;
@@ -664,16 +664,53 @@ class Texture{
                             this.data                       ) ;
 
         gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+
+
+        this._pairable = readOption( options.pair, false ) ;
+        this._pairable = readOption( options.pairable , this._pairable ) ;
+        this._reader = null ;
+
+        if (this.pairable){
+            this._reader = new TextureReader(this) ;
+            console.log(this._reader) ;
+        }
     }
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *  CONSTRUCTOR ENDS
  *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
+    get pairable(){
+        return this._pairable ;
+    }
 
+    set pairable(p){
+        if ((!this.pairable) && p ){
+            this.reader = new TextureReader(this) ;
+        }
+        this._pairable = p ;
+    }
+    get value(){
+        if (this.pairable){
+            return this.reader.value ;
+        }else{
+            return null ;
+        }
+    }
+
+    read(){
+        return this.value ;
+    }
     get data(){
         return this._data ;
     }
+    
+    get reader(){
+        return this._reader ;
+    }
 
+    set reader(nr){
+        this._reader = nr ;
+    }
     set data(new_data){
         this._data = new_data ;
         this.updateData(new_data) ;
@@ -797,40 +834,8 @@ class Float32RTexture extends Texture{
 class Float32Texture extends Texture{
     constructor(w,h,options={}){
         super(w,h,'rgba32f','rgba','float',options) ;
-        this._pairable = readOptions(options.pair, false) ;
-        this._pairable = readOptions(options.pairable, this._pairable) ;
-        this.reader = null ;
-
-        if (this.pairable){
-            this.reader = new TextureReader(this) ;
-        }
     }
-    get pairable(){
-        return this._pairable ;
-    }
-
-    set pairable(p){
-        if ((!this.pairable) && p){
-            this.reader = new TextureReader(this) ;
-        }
-        this._pairable = p ;
-    }
-
-    get value(){
-        if (this.pairable){
-            return this.reader.value ;
-        }else{
-            return null ;
-        }
-    }
-
-    get reader(){
-        return this._reader ;
-    }
-    set reader(nr){
-        this._reader = nr ;
-    }
-
+   
     resize( width, height ){
         var target = {} ;
         target.texture = this.texture ;
@@ -7158,13 +7163,86 @@ class TextureReader{
         ) ;
         gl.bindFramebuffer( gl.READ_FRAMEBUFFER, null) ;
 
-        this._buffer = new Float32Array(this.width*this.height*4) ;
+        this._buffer = new
+            this.TypedArray(this.width*this.height*this.numberOfColors) ;
     }
 /*------------------------------------------------------------------------
  * End of constructor
  *------------------------------------------------------------------------
  */
-    
+    get numberOfColors(){
+        switch (this.target.format){
+            case (gl.RED) : 
+                return 1 ;
+                break ;
+            case (gl.RED_INTEGER)  :
+                return 1 ;
+                break ;
+            case (gl.RG) :
+                return 2 ;
+                break ;
+            case (gl.RG_INTEGER):
+                return 2 ;
+                break ;
+            case (gl.RGB):
+                return 3 ;
+                break ;
+            case (gl.RGB_INTEGER):
+                return 3 ;
+                break ;
+            case (gl.RGBA):
+                return 4 ;
+                break ;
+            case (gl.RGBA_INTEGER):
+                return 4 ;
+                break ;
+            default :
+                return 4 ;
+                break ;
+        }
+    }
+
+    get TypedArray(){
+        switch ( this.target.type ){
+            case (gl.BYTE):
+                return Int8Array ;
+                break ;
+            case (gl.UNSIGNED_BYTE):
+                return Uint8Array
+                break ;
+
+            case (gl.SHORT ) :
+                return Int16Array ;
+                break ;
+            case (gl.UNSIGNED_SHORT ) :
+                return Uint16Array ;
+                break ;
+
+            case (gl.INT ) :
+                return Int32Array ;
+                break ;
+            case (gl.UNSIGNED_INT ) :
+                return Uint32Array ;
+                break ;
+
+            case (gl.HALF_FLOAT ) :
+                return Float16Array ;
+                break ;
+            case (gl.FLOAT ) :
+                return Float32Array ;
+                break ;
+            default : 
+                return Float32Array ;
+        }
+    }
+
+    get format(){
+        return this.target.format ;
+    }
+
+    get type(){
+        return this.target.type ;
+    }
     get target(){
         return this._target ;
     }
@@ -7196,7 +7274,7 @@ class TextureReader{
             gl.readBuffer( gl.COLOR_ATTACHMENT0 ) ;
 
             gl.readPixels(  0, 0,this.width,this.height, 
-                    gl.RGBA, gl.FLOAT, this._buffer ) ;
+                    this.format, this.type , this._buffer ) ;
 
             gl.bindFramebuffer( gl.READ_FRAMEBUFFER, null) ;
 
