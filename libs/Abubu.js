@@ -13187,7 +13187,6 @@ class Texture{
 
         if (this.pairable){
             this._reader = new TextureReader(this) ;
-            console.log(this._reader) ;
         }
     }
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
