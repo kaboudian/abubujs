@@ -13,7 +13,7 @@
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.3.01' ;
+var version = 'V6.3.02' ;
 var glsl_version = '300 es' ;
 var updateTime = 'Mon 30 Mar 2020 17:39:18 (EDT)' ;
 
@@ -9145,6 +9145,7 @@ class Editor{
         this._active = 0 ;
         this._names = [] ;
         this._titles = [] ;
+        this._modes = [] ;
         try{
             
             this.editor = ace.edit(this.id) ;
@@ -9159,6 +9160,7 @@ class Editor{
         for(var i in sources){
             var so = sources[i] ;
             this.names.push(i) ;
+            this.modes.push( readOptions(so.mode, this.mode ) ) ;
             this.titles.push(sources[i].title) ;
             so.name = i ;
             so.parent = this ;
@@ -9205,6 +9207,13 @@ class Editor{
     set mode(nm){
         this._mode = nm ;
         this.editor.getSession().setMode(this.mode) ;
+    }
+
+    get modes(){
+        return this._modes ;
+    }
+    set modes(nm){
+        this._modes = nm ;
     }
     get theme(){
         return this._theme ;
@@ -9308,6 +9317,7 @@ class Editor{
             if (s   == this.sources[i].title || 
                 s   == this.sources[i].name     ){
                 this._active = i ;
+                this.mode = this.modes[i] ;
                 this.editor.setValue(this.active.source) ;
                 this.editor.clearSelection() ;
                 return ;
