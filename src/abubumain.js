@@ -2,7 +2,7 @@
  * Abubu.js     :   library for computational work
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Mon 30 Mar 2020 17:39:13 (EDT)
+ * DATE         :   Wed 01 Jul 2020 17:05:20 (EDT)
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
@@ -13,9 +13,9 @@
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.3.02' ;
+var version = 'V6.3.03' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Mon 30 Mar 2020 17:39:18 (EDT)' ;
+var updateTime = 'Wed 01 Jul 2020 17:05:03 (EDT)' ;
 
 var log         = console.log ;
 var warn        = console.warn ;
@@ -9052,11 +9052,18 @@ class SourceCode{
         this._source    = readOptions(o.source   , null) ;
         this._filename  = readOptions(o.filename , 'shader.glsl');
         this._solvers   = readOptions(o.solvers ,  [] ) ;
+        this._func      = readOptions(o.FUNCTION , null ) ;
         this._title     = readOptions(o.title , '');
         this._name      = readOptions(o.name , this.title ) ;
         this._parent    = readOptions(o.parent, undefined) ;
         this._callback  = readOptions(o.callback, function(){}) ;
-        this.shaderType = readOptions(o.type, 'fragmentShader') ;
+        this.type = readOptions(o.type, 'fragmentShader') ;
+    }
+    get func(){
+        return this._func ;
+    }
+    set func(nf){
+        this._func = nf ;
     }
 
     set name(nn){
@@ -9073,15 +9080,17 @@ class SourceCode{
         this._callback = nc ;
     }
 
-    set shaderType(t){
+    set type(t){
         if (t == 'fragmentShader'){
-            this._shaderType = 0 ;
+            this._type = 0 ;
+        }else if (t=='vertexShader'){
+            this._type = 1 ;
         }else{
-            this._shaderType = 1 ;
+            this._type = 2 ;
         }
     }
-    get shaderType(){
-        return this._shaderType ;
+    get type(){
+        return this._type ;
     }
 
     get source(){
@@ -9093,11 +9102,16 @@ class SourceCode{
             return ;
         }
         for(var sol in this.solvers ){
-            if (this.shaderType == 0){
+            if (this.type == 0){
                 this.solvers[sol].fragmentShader = this.source ;
-            }else{
+            }else if (this.type == 1){
                 this.solvers[sol].vertexShader = this.source ;
             }
+        }
+        if ( this.type == 2 ){
+            try{
+                this.func = new Function( "return " + this.source )() ;
+            }catch(e){} 
         }
         try{
             this.callback() ;
@@ -9146,6 +9160,7 @@ class Editor{
         this._names = [] ;
         this._titles = [] ;
         this._modes = [] ;
+        this._on = readOptions(o.on , 'change') ;
         try{
             
             this.editor = ace.edit(this.id) ;
