@@ -12528,9 +12528,9 @@ function getColormaps(){
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.3.03' ;
+var version = 'V6.4.01' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Wed 01 Jul 2020 17:05:03 (EDT)' ;
+var updateTime = 'Sat 05 Sep 2020 21:25:16 (EDT)' ;
 
 var log         = console.log ;
 var warn        = console.warn ;
@@ -12594,6 +12594,21 @@ function readGlOption(str, defaultValue, warning ){
                 arguments.callee.caller.name+'"') ;
         }
         return defaultValue ;
+    }
+}
+
+/*========================================================================
+ * get a string and return the appropriate gl option
+ *========================================================================
+ */ 
+function GL(str){
+    if (str == undefined){
+        warn( 'No gl string was provided' ) ;
+        log('Warning was issued by "'+
+                arguments.callee.caller.name+'"') ;
+        return null ;
+    }else{
+        return gl[str.toUpperCase()] ;
     }
 }
 
@@ -13129,57 +13144,30 @@ class Texture{
 
         this.gl         = cgl.gl ;
         this.texture    = gl.createTexture() ;
-        this.width      = w ;
-        this.height     = h ;
+        this._width      = w ;
+        this._height     = h ;
 
-        this.internalFormat = readGlOption( iformat, 'rgba32f' ,
+        this._internalFormat = readOption( iformat, 'rgba32f' ,
                 'No internal format provided, assuming RBGA32F' ) ;
-        this.format = readGlOption( format , 'rgba' ) ;
-        this.type   = readGlOption( type, 'float' ) ;
+        this._format = readOption( format , 'rgba',
+            'No format was provided, assuming "rgba"' ) ;
+        this._type   = readOption( type, 'float',
+            'No type was provided, assuming "float"') ;
 
+        this._wrapS    = readOption( options.wrapS, 'clamp_to_edge') ;
+        this._wrapT    = readOption( options.wrapT, 'clamp_to_edge') ;
+
+        this._minFilter = readOption( options.minFilter , 'nearest' ) ;
+        this._magFilter = readOption( options.magFilter , 'nearest' ) ;
         this._data       = readOption(   options.data ,
                                         null                ) ;
-        this.wrapS      = readGlOption( options.wrapS ,
-                                        gl.CLAMP_TO_EDGE    ) ;
-        this.wrapT      = readGlOption( options.wrapT ,
-                                        gl.CLAMP_TO_EDGE    ) ;
-        this.minFilter  = readGlOption( options.minFilter,
-                                        gl.NEAREST          ) ;
-        this.magFilter  = readGlOption( options.magFilter,
-                                        gl.NEAREST          ) ;
 
 /*------------------------------------------------------------------------
  * bind and set texture
  *------------------------------------------------------------------------
  */
 
-        gl.bindTexture(     gl.TEXTURE_2D, this.texture     ) ;
-
-        gl.texParameteri(   gl.TEXTURE_2D,
-                            gl.TEXTURE_WRAP_S,
-                            this.wrapS                      ) ;
-
-        gl.texParameteri(   gl.TEXTURE_2D,
-                            gl.TEXTURE_WRAP_T,
-                            this.wrapT                      ) ;
-
-        gl.texParameteri(   gl.TEXTURE_2D,
-                            gl.TEXTURE_MIN_FILTER,
-                            this.minFilter                  ) ;
-
-        gl.texParameteri(   gl.TEXTURE_2D,
-                            gl.TEXTURE_MAG_FILTER,
-                            this.magFilter                  ) ;
-
-        gl.texImage2D(      gl.TEXTURE_2D, 0 ,
-                            this.internalFormat,
-                            this.width, this.height, 0,
-                            this.format,
-                            this.type,
-                            this.data                       ) ;
-
-        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
-
+        this.initialize() ;
 
         this._pairable = readOption( options.pair, false ) ;
         this._pairable = readOption( options.pairable , this._pairable ) ;
@@ -13193,6 +13181,215 @@ class Texture{
  *  CONSTRUCTOR ENDS
  *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
+
+/*------------------------------------------------------------------------
+ * initialize the texture 
+ *------------------------------------------------------------------------
+ */
+
+    initialize(){
+        gl.bindTexture(     gl.TEXTURE_2D, this.texture     ) ;
+
+        gl.texParameteri(   gl.TEXTURE_2D,
+                            gl.TEXTURE_WRAP_S,
+                            GL(this.wrapS)                  ) ;
+
+        gl.texParameteri(   gl.TEXTURE_2D,
+                            gl.TEXTURE_WRAP_T,
+                            GL(this.wrapT)                  ) ;
+
+        gl.texParameteri(   gl.TEXTURE_2D,
+                            gl.TEXTURE_MIN_FILTER,
+                            GL(this.minFilter)              ) ;
+
+        gl.texParameteri(   gl.TEXTURE_2D,
+                            gl.TEXTURE_MAG_FILTER,
+                            GL(this.magFilter)              ) ;
+
+        gl.texImage2D(      gl.TEXTURE_2D, 0 ,
+                            GL(this.internalFormat),
+                            this.width, this.height, 0,
+                            GL(this.format),
+                            GL(this.type),
+                            this.data                       ) ;
+
+        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+
+        return ;
+    }
+/*------------------------------------------------------------------------
+ * getters and setters 
+ *------------------------------------------------------------------------
+ */
+
+// width and height ......................................................
+    resize(width,height){
+        this._width = readOption(width,this.width) ;
+        this._height = readOption(height,this.height) ;
+        gl.bindTexture(gl.TEXTURE_2D, this.texture) ;
+        gl.texImage2D(  gl.TEXTURE_2D, 0 , 
+                        GL(this.internalFormat),
+                        this.width, this.height, 0, 
+                        GL(this.format), GL(this.type), null ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+    }
+
+    get width(){
+        return this._width ;
+    }
+    set width(w){
+        this.resize(w,this.height) ;
+    }
+
+    get height(){
+        return this._height ;
+    }
+
+    set height(h){
+        this.resize(this.width,h) ;
+    }
+
+// internalFormat ........................................................
+    get internalFormat(){
+        return this._internalFormat ;
+    }
+    set internalFormat(nif){
+        this._internalFormat = readOption(nif, this.internalFormat ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, this.texture     ) ;
+        gl.texImage2D(  gl.TEXTURE_2D, 0 , 
+                        GL(this.internalFormat),
+                        this.width, this.height, 0, 
+                        GL(this.format), GL(this.type), null ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+        return ;
+    }
+
+// format ................................................................
+    get format(){
+        return this._format ;
+    }
+    set format(nf){
+        this._format = nf ;
+        gl.bindTexture(     gl.TEXTURE_2D, this.texture     ) ;
+        gl.texImage2D(  gl.TEXTURE_2D, 0 , 
+                        GL(this.internalFormat),
+                        this.width, this.height, 0, 
+                        GL(this.format), GL(this.type), null ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+        return ;
+    }
+
+// type ..................................................................
+    get type(){
+        return this._type ;
+    }
+    set type(nt){
+        this._type = readOption(nt, this.type) ;
+        gl.bindTexture(     gl.TEXTURE_2D, this.texture     ) ;
+        gl.texImage2D(  gl.TEXTURE_2D, 0 , 
+                        GL(this.internalFormat),
+                        this.width, this.height, 0, 
+                        GL(this.format), GL(this.type), null ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+        return ;
+    }
+
+// wrapS .................................................................
+    get wrapS(){
+        return this._wrapS ;
+    }
+    set wrapS(ws){
+        this._wrapS = readOption( ws, this.wrapS ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, this.texture     ) ;
+        gl.texParameteri(   gl.TEXTURE_2D,
+                            gl.TEXTURE_WRAP_S,
+                            GL(this.wrapS)                  ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+        return ;
+    }
+    setWrapS(ws){
+        this.wrapS = ws ;
+        return ;
+    }
+
+// wrapT .................................................................
+    get wrapT(){
+        return this._wrapT ;
+    }
+    set wrapT(wt){
+        this._wrapT = readOption(wt, this.wrapT) ;
+        gl.bindTexture(     gl.TEXTURE_2D, this.texture     ) ;
+        gl.texParameteri(   gl.TEXTURE_2D,
+                            gl.TEXTURE_WRAP_T,
+                            GL(this.wrapT)                  ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+        return ;
+    }
+
+    setWrapT(wt){
+        this.wrapT = wt ;
+        return ;
+    }
+
+// minFilter .............................................................
+    get minFilter(){
+        return this._minFilter ;
+    }
+    set minFilter(nf){
+        this._minFilter = readOption(nf , this.minFilter ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, this.texture     ) ;
+        gl.texParameteri(   gl.TEXTURE_2D,
+                            gl.TEXTURE_MIN_FILTER,
+                            GL(this.minFilter)              ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+    }
+    setMinFilter(minFilter){
+        this.minFilter = readOption(minFilter, this.minFilter ) ;
+        return this.minFilter ;
+    }
+
+// magFilter .............................................................
+    get magFilter(){
+        return this._magFilter ;
+    }
+    
+    set magFilter(nf){
+        this._magFilter = readOption(nf, this.magFilter ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, this.texture     ) ;
+        gl.texParameteri(   gl.TEXTURE_2D,
+                            gl.TEXTURE_MAG_FILTER,
+                            GL(this.magFilter)              ) ;
+        gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+    }
+
+    setMagFilter(magFilter){
+        this.magFilter = readOption(magFilter, this.magFilter ) ;
+        return this.magFilter ; 
+    }
+
+// data ..................................................................
+    get data(){
+        return this._data ;
+    }
+
+    set data(new_data){
+        this._data = new_data ;
+        this.updateData(new_data) ;
+    }
+
+    updateData( newData ){
+        gl.bindTexture(gl.TEXTURE_2D, this.texture) ;
+
+        this._data = readOption( newData, this.data ) ;
+        gl.texImage2D( gl.TEXTURE_2D, 0 , GL(this.internalFormat),
+                    this.width, this.height, 0, 
+                    GL(this.format), GL(this.type) ,
+                    this.data    ) ;
+        gl.bindTexture(gl.TEXTURE_2D, null) ;
+    }
+
+
+// pairability ...........................................................
     get pairable(){
         return this._pairable ;
     }
@@ -13203,6 +13400,16 @@ class Texture{
         }
         this._pairable = p ;
     }
+    
+            
+    get reader(){
+        return this._reader ;
+    }
+
+    set reader(nr){
+        this._reader = nr ;
+    }
+
     get value(){
         if (this.pairable){
             return this.reader.value ;
@@ -13213,101 +13420,6 @@ class Texture{
 
     read(){
         return this.value ;
-    }
-    get data(){
-        return this._data ;
-    }
-    
-    get reader(){
-        return this._reader ;
-    }
-
-    set reader(nr){
-        this._reader = nr ;
-    }
-    set data(new_data){
-        this._data = new_data ;
-        this.updateData(new_data) ;
-    }
-/*------------------------------------------------------------------------
- * setWrapS
- *------------------------------------------------------------------------
- */
-    setWrapS(wrapS){
-        this.wrapS = readGlOption(wrapS, this.wrapS ) ;
-        gl.bindTexture(     gl.TEXTURE_2D, this.texture ) ;
-        gl.texParameteri(   gl.TEXTURE_2D,
-                            gl.TEXTURE_WRAP_S,
-                            this.wrapS                  ) ;
-        gl.bindTexture(     gl.TEXTURE_2D, null         ) ;
-    }
-
-/*------------------------------------------------------------------------
- * setWrapT
- *------------------------------------------------------------------------
- */
-    setWrapT(wrapT){
-        this.wrapT = readGlOption(wrapT, this.wrapT ) ;
-        gl.bindTexture(     gl.TEXTURE_2D, this.texture ) ;
-        gl.texParameteri(   gl.TEXTURE_2D,
-                            gl.TEXTURE_WRAP_T,
-                            this.wrapT                  ) ;
-        gl.bindTexture(     gl.TEXTURE_2D, null         ) ;
-        return ;
-    }
-
-/*------------------------------------------------------------------------
- * setMinFilter
- *------------------------------------------------------------------------
- */
-    setMinFilter(minFilter){
-        this.minFilter = readOption(minFilter, this.minFilter ) ;
-        gl.bindTexture(     gl.TEXTURE_2D, this.texture ) ;
-        gl.texParameteri(   gl.TEXTURE_2D,
-                            gl.TEXTURE_MIN_FILTER,
-                            this.minFilter              ) ;
-        gl.bindTexture(     gl.TEXTURE_2D, null         ) ;
-
-    }
-
-/*------------------------------------------------------------------------
- * setMagFilter
- *------------------------------------------------------------------------
- */
-    setMagFilter(magFilter){
-        this.magFilter = readOption(magFilter, this.magFilter ) ;
-        gl.bindTexture(     gl.TEXTURE_2D, this.texture ) ;
-        gl.texParameteri(   gl.TEXTURE_2D,
-                            gl.TEXTURE_MAG_FILTER,
-                            this.magFilter              ) ;
-        gl.bindTexture(     gl.TEXTURE_2D, null         ) ;
-
-    }
-
-/*------------------------------------------------------------------------
- * updateData
- *------------------------------------------------------------------------
- */
-    updateData( newData ){
-        gl.bindTexture(gl.TEXTURE_2D, this.texture) ;
-
-        this._data = readOption( newData, this.data ) ;
-        gl.texImage2D( gl.TEXTURE_2D, 0 , this.internalFormat,
-                    this.width, this.height, 0, this.format, this.type ,
-                    this.data    ) ;
-        gl.bindTexture(gl.TEXTURE_2D, null) ;
-    }
-/*------------------------------------------------------------------------
- * resize
- *------------------------------------------------------------------------
- */
-    resize(width,height){
-        this.width = width ;
-        this.height = height ;
-        gl.bindTexture(gl.TEXTURE_2D, this.texture) ;
-        gl.texImage2D(  gl.TEXTURE_2D, 0 , this.internalFormat,
-                        this.width,
-                        this.height, 0, this.format, this.type, null ) ;
     }
 }
 
@@ -15182,7 +15294,8 @@ class Signal{
                 vertexShader    : DefaultVertexShader.value ,
                 fragmentShader  : sctwShader.value ,
                 uniforms        : {
-                    map         : { type : 't', value : this.ccrr       } ,
+                    map         : { type : 's', value : this.ccrr,
+                     minFilter : 'linear', magFilter : 'linear' } ,
                     oldWindow   : { type: 'f', value : this.timeWindow  } ,
                     newWindow   : { type: 'f', value : this.timeWindow  } ,
                 } ,
@@ -19685,7 +19798,7 @@ class TextureReader{
  *------------------------------------------------------------------------
  */
     get numberOfColors(){
-        switch (this.target.format){
+        switch (GL(this.target.format)){
             case (gl.RED) : 
                 return 1 ;
                 break ;
@@ -19717,7 +19830,7 @@ class TextureReader{
     }
 
     get TypedArray(){
-        switch ( this.target.type ){
+        switch ( GL(this.target.type) ){
             case (gl.BYTE):
                 return Int8Array ;
                 break ;
@@ -19788,7 +19901,7 @@ class TextureReader{
             gl.readBuffer( gl.COLOR_ATTACHMENT0 ) ;
 
             gl.readPixels(  0, 0,this.width,this.height, 
-                    this.format, this.type , this._buffer ) ;
+                    GL(this.format), GL(this.type) , this._buffer ) ;
 
             gl.bindFramebuffer( gl.READ_FRAMEBUFFER, null) ;
 
@@ -21753,8 +21866,7 @@ class Editor{
         this.editor.setTheme(this.theme) ;
     }
 
-
-        load(){
+    load(){
         this.reader.input.click() ;
     }
     get filename(){
