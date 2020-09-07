@@ -1003,7 +1003,6 @@ class ImageTexture extends Float32Texture{
     get height(){
         return this._height ;
     }
-    
 }
 /*========================================================================
  * CanvasTexture( canvas )
