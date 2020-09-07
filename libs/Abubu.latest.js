@@ -12517,7 +12517,7 @@ function getColormaps(){
  * Abubu.js     :   library for computational work
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Wed 01 Jul 2020 17:05:20 (EDT)
+ * DATE         :   Sun 06 Sep 2020 21:23:28 (EDT)
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
@@ -12528,9 +12528,9 @@ function getColormaps(){
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.4.01' ;
+var version = 'V6.4.02' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Sat 05 Sep 2020 21:25:16 (EDT)' ;
+var updateTime = 'Sun 06 Sep 2020 21:23:28 (EDT)' ;
 
 var log         = console.log ;
 var warn        = console.warn ;
@@ -13159,7 +13159,7 @@ class Texture{
 
         this._minFilter = readOption( options.minFilter , 'nearest' ) ;
         this._magFilter = readOption( options.magFilter , 'nearest' ) ;
-        this._data       = readOption(   options.data ,
+        this._data      = readOption(   options.data ,
                                         null                ) ;
 
 /*------------------------------------------------------------------------
@@ -13486,8 +13486,8 @@ var FloatRenderTarget = Float32Texture ;
  * ImageTexture
  *========================================================================
  */
-class ImageTexture{
-    constructor(Img){
+class ImageTexture extends Float32Texture{
+    constructor(Img, options={}){
         if ( Img.used ){
             log( 'Image is used once and cannot be re-used in '
                 +'the library. '
@@ -13497,40 +13497,79 @@ class ImageTexture{
         }
 
         Img.used = true ;
-
-        this.width = Img.width ;
-        this.height = Img.height ;
-        this.image = Img ;
-        this.cgl = cgl ;
-
-        this.texture = gl.createTexture() ;
-        gl.bindTexture(gl.TEXTURE_2D, this.texture) ;
-        gl.texParameteri(gl.TEXTURE_2D, 
-                gl.TEXTURE_WRAP_S, 
-                gl.CLAMP_TO_EDGE );
-        gl.texParameteri(gl.TEXTURE_2D, 
-                gl.TEXTURE_WRAP_T, 
-                gl.CLAMP_TO_EDGE );
-        gl.texParameteri(gl.TEXTURE_2D, 
-                gl.TEXTURE_MIN_FILTER, 
-                gl.NEAREST   );
-        gl.texParameteri(gl.TEXTURE_2D, 
-                gl.TEXTURE_MAG_FILTER, 
-                gl.NEAREST   );
+        options.data = Img ;
         gl.pixelStorei( gl.UNPACK_FLIP_Y_WEBGL, true) ;
+        super(Img.width, Img.height, options) ; 
+    }
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *  CONSTRUCTOR ENDS
+ *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+    set width(w){
+        console.log("Cannot change size!") ;
+    }
+    get width(){
+        return this._width ;
+    }
+    set height(h){
+        console.log("Cannot change height") ;
+    }
+    get height(){
+        return this._height ;
+    }
+    
+}
+/*========================================================================
+ * CanvasTexture( canvas )
+ *========================================================================
+ */
+class oldCanvasTexture extends Float32Texture{
+    constructor(canvas, options={}){
+        options.data = canvas ;
+        gl.pixelStorei( gl.UNPACK_FLIP_Y_WEBGL, true) ;
+        super(canvas.width, canvas.height, options) ; 
+        this.canvas = canvas ;
+    }
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *  CONSTRUCTOR ENDS
+ *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+    update(){
+        gl.bindTexture(gl.TEXTURE_2D, this.texture) ;
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true) ;
         gl.texImage2D(  gl.TEXTURE_2D, 0 , gl.RGBA32F,
                         this.width, this.height, 0, gl.RGBA, gl.FLOAT,
-                        this.image ) ;
-
+                        this.canvas ) ;
         gl.bindTexture(gl.TEXTURE_2D, null) ;
     }
+
+    get width(){
+        return this.canvas.width ;
+    }
+    get height(){
+        return this.canvas.height ;
+    }
+
+    set width(w){
+        this.canvas.width = w ;
+    }
+    set height(h){
+        this.canvas.height = h ;
+    }
+    resize(w,h){
+        this.width = w ;
+        this.height = h ;
+        this.update() ;
+    }
 }
+        
 
 /*========================================================================
  * CanvasTexture( canvas )
  *========================================================================
  */
-class CanvasTexture{
+class LegacyCanvasTexture{
     constructor(canvas){
         this.canvas = canvas ;
         this.cgl    = cgl ;
@@ -22008,6 +22047,7 @@ this.FloatRenderTarget   = Float32Texture ;
 this.ImageTexture        = ImageTexture ;
 this.TableTexture        = TableTexture ;
 this.CanvasTexture       = CanvasTexture ;
+this.LegacyCanvasTexture = LegacyCanvasTexture ;
 
 this.Float32TextureTableBond         = Float32TextureTableBond ;
 
