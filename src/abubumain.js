@@ -13,9 +13,9 @@
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.4.02' ;
+var version = 'V6.4.03' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Sun 06 Sep 2020 21:23:28 (EDT)' ;
+var updateTime = 'Wed 09 Sep 2020 13:26:31 (EDT)';
 
 var log         = console.log ;
 var warn        = console.warn ;
@@ -1008,7 +1008,7 @@ class ImageTexture extends Float32Texture{
  * CanvasTexture( canvas )
  *========================================================================
  */
-class oldCanvasTexture extends Float32Texture{
+class CanvasTexture extends Float32Texture{
     constructor(canvas, options={}){
         options.data = canvas ;
         gl.pixelStorei( gl.UNPACK_FLIP_Y_WEBGL, true) ;

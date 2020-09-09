@@ -1,9 +1,10 @@
-all : bin/Abubu.js
+all : libs/Abubu.js
 
 subdirs:=src
-bin/Abubu.js: .PHONY
+libs/Abubu.js: .PHONY
 	make --directory=$(subdirs)
 	./maker.sh
+	cp -v libs/Abubu.js libs/Abubu.latest.js	
 
 .PHONY:
 
