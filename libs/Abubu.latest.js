@@ -12517,7 +12517,6 @@ function getColormaps(){
  * Abubu.js     :   library for computational work
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Sun 06 Sep 2020 21:23:28 (EDT)
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
@@ -12528,9 +12527,9 @@ function getColormaps(){
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'V6.4.03' ;
+var version = 'v6.4.04' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Wed 09 Sep 2020 13:26:31 (EDT)';
+var updateTime = 'Wed 09 Sep 2020 18:57:31 (EDT)';
 
 var log         = console.log ;
 var warn        = console.warn ;
