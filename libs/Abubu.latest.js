@@ -12513,6 +12513,9 @@ function getColormaps(){
 };
 
 
+var version = 'v6.4.05' ;
+var updateTime = 'Thu 10 Sep 2020 13:47:06 (EDT)';
+
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
  *
@@ -12527,9 +12530,7 @@ function getColormaps(){
  */
 var infoLine =''; for(var i=0;i<35;i++) infoLine+='*' ;
 
-var version = 'v6.4.04' ;
 var glsl_version = '300 es' ;
-var updateTime = 'Wed 09 Sep 2020 18:57:31 (EDT)';
 
 var log         = console.log ;
 var warn        = console.warn ;
@@ -13387,6 +13388,9 @@ class Texture{
         gl.bindTexture(gl.TEXTURE_2D, null) ;
     }
 
+    update( nd ){
+        this.data = readOption(nd, this.data ) ;
+    }
 
 // pairability ...........................................................
     get pairable(){
@@ -13616,13 +13620,41 @@ class LegacyCanvasTexture{
     }
 }
 
+/*========================================================================
+ * TableTexture
+ *========================================================================
+ */
 
+class TableTexture extends Float32Texture{
+    constructor( t, w, h=1, options={} ){
+        options.data = t ;
+        options.minFilter = 
+            readOptions(options.minFilter, 'linear' ) ;
+        options.magFilter =  
+            readOptions(options.magFilter, 'linear' ) ;
+        options.wrapS = 
+            readOptions(options.wrapS , 'clamp_to_edge') ;
+        options.wrapT = 
+            readOptions(options.wrapT , 'clamp_to_edge') ;
+
+        super(w,h,options) ;
+    }
+    update(nt){
+        this.data = readOption(nt, this.data) ;
+    }
+    get table(){
+        return this.data ;
+    }
+    set table(nt){
+        this.update(nt) ;
+    }
+}
 
 /*========================================================================
  * TableTexture
  *========================================================================
  */
-class TableTexture{
+class LegacyTableTexture{
     constructor( t, w, h=1, options ={} ){
         this.cgl = cgl ;
         this.width = w ;
@@ -15034,6 +15066,10 @@ class Solver{
                 this.canvas.height
             ) ;
         }
+    }
+
+    run(runOptions){
+        this.render(runOptions) ;
     }
 
 /*------------------------------------------------------------------------
