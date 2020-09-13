@@ -12513,8 +12513,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.4.05' ;
-var updateTime = 'Thu 10 Sep 2020 13:47:06 (EDT)';
+var version = 'v6.4.06' ;
+var updateTime = 'Sun 13 Sep 2020 16:54:17 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -13414,11 +13414,14 @@ class Texture{
     }
 
     get value(){
-        if (this.pairable){
-            return this.reader.value ;
-        }else{
-            return null ;
+        if (!this.pairable){
+            this.pairable = true ;
         }
+        return this.reader.value ;
+    }
+
+    valueOf(){
+        return this.value ;
     }
 
     read(){
