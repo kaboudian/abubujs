@@ -12514,7 +12514,7 @@ function getColormaps(){
 
 
 var version = 'v6.4.06' ;
-var updateTime = 'Sun 13 Sep 2020 16:54:17 (EDT)';
+var updateTime = 'Sun 13 Sep 2020 21:09:22 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -14390,12 +14390,76 @@ class Uniform{
                         ) ;
 
                 break ;
+
             case 'b' :  /* boolean */
                 gl.uniform1i(
                         location ,
                         value
                         ) ;
                 break ;
+            case 'u' :  /* unsigned integer */
+                gl.uniform1ui(
+                        location ,
+                        value
+                        ) ;
+                break ;
+
+            
+            case 'u2' : /* 2-dimensional unsigned integer vector */
+                gl.uniform2ui(
+                        location ,
+                        value[0],
+                        value[1]
+                        ) ;
+                break ;
+
+            case 'u3' : /* 3-dimensional unsigned integer vector */
+                gl.uniform3ui(
+                        location ,
+                        value[0],
+                        value[1],
+                        value[2]
+                        ) ;
+                break ;
+
+            case 'uv' : /* 1-dimensional unsigned integer array  */
+                gl.uniform1uiv(
+                        location ,
+                        value
+                        ) ;
+                break ;
+
+            case 'u2v': /* 2-dimensional unsigned integer array  */
+                gl.uniform2uiv(
+                        location ,
+                        value
+                        ) ;
+                break ;
+
+            case 'u3v': /* 3-dimensional unsigned integer array  */
+                gl.uniform3uiv(
+                        location ,
+                        value
+                        ) ;
+                break ;
+
+            case 'u4' :  /* 4-dimensional unsigned integer vector */
+                gl.uniform4ui(
+                        location ,
+                        value[0],
+                        value[1],
+                        value[2],
+                        value[3]
+                        ) ;
+                break ;
+
+            case 'u4v' : /* 4-dimensional unsigned integer array  */
+                gl.uniform4uiv(
+                        location ,
+                        value
+                        ) ;
+                break ;
+
             case 'i' :  /* integer */
                 gl.uniform1i(
                         location ,
@@ -14563,7 +14627,14 @@ class Uniform{
             case 'mat2': /* 2x2 floating point matrix   */
                 gl.uniformMatrix2fv(
                         location,
-                        gl.FLASE,
+                        gl.FALSE,
+                        value
+                        ) ;
+                break ;
+            case 'mat2x2': /* 2x2 floating point matrix   */
+                gl.uniformMatrix2fv(
+                        location,
+                        gl.FALSE,
                         value
                         ) ;
                 break ;
@@ -14571,17 +14642,74 @@ class Uniform{
             case 'mat3': /* 3x3 floating point matrix   */
                 gl.uniformMatrix3fv(
                         location,
-                        gl.FLASE,
+                        gl.FALSE,
                         value
                         ) ;
                 break ;
-
+            case 'mat3x3': /* 3x3 floating point matrix   */
+                gl.uniformMatrix3fv(
+                        location,
+                        gl.FALSE,
+                        value
+                        ) ;
+                break ;
             case 'mat4': /* 4x4 floating point matrix   */
                 gl.uniformMatrix4fv(
                         location,
-                        gl.FLASE,
+                        gl.FALSE,
                         value
                         ) ;
+                break ;
+            case 'mat4x4': /* 4x4 floating point matrix   */
+                gl.uniformMatrix4fv(
+                        location,
+                        gl.FALSE,
+                        value
+                        ) ;
+                break ;
+            case 'mat2x3': /* 2x3 matrix */
+                gl.uniformMatrix2x3fv(
+                        location,
+                        gl.FALSE ,
+                        value ) ;
+                break ;
+            case 'mat2x4': 
+                gl.uniformMatrix2x4fv(
+                        location,
+                        gl.FALSE ,
+                        value ) ;
+
+                break ;
+
+            case 'mat3x2':
+                gl.uniformMatrix3x2fv(
+                        location,
+                        gl.FALSE ,
+                        value ) ;
+
+                break ;
+
+            case 'mat3x4' :
+                gl.uniformMatrix3x4fv(
+                        location,
+                        gl.FALSE ,
+                        value ) ;
+                break ;
+
+            case 'mat4x2' :
+                gl.uniformMatrix4x2fv(
+                        location,
+                        gl.FALSE ,
+                        value ) ;
+
+                break ;
+
+            case 'mat4x3' :
+                gl.uniformMatrix4x3fv(
+                        location,
+                        gl.FALSE ,
+                        value ) ;
+
                 break ;
          }
     } /* End of set value */
