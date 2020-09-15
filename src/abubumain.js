@@ -5540,8 +5540,8 @@ class Plot2D{
         }
         this._clrm.image.plot = this ;
         this._clrm.image.init = function(e){
-            e.path[0].plot.init() ;
-            e.path[0].plot.render() ;
+            e.composedPath()[0].plot.init() ;
+            e.composedPath()[0].plot.render() ;
         }
         this._clrm.image.onload = (e) => this._clrm.image.init(e) ;
     }
