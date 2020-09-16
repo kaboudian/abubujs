@@ -1,5 +1,5 @@
-var version = 'v6.4.06' ;
-var updateTime = 'Sun 13 Sep 2020 21:09:22 (EDT)';
+var version = 'v6.4.07' ;
+var updateTime = 'Wed 16 Sep 2020 16:53:51 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -5540,8 +5540,8 @@ class Plot2D{
         }
         this._clrm.image.plot = this ;
         this._clrm.image.init = function(e){
-            e.path[0].plot.init() ;
-            e.path[0].plot.render() ;
+            e.composedPath()[0].plot.init() ;
+            e.composedPath()[0].plot.render() ;
         }
         this._clrm.image.onload = (e) => this._clrm.image.init(e) ;
     }
@@ -6934,8 +6934,8 @@ class VolumeRayCaster{
         }
         this.clrm.image.vrc = this ;
         this.clrm.image.init = function(e){
-            e.path[0].vrc.initForeground() ;
-            e.path[0].vrc.render() ;
+            e.composedPath()[0].vrc.initForeground() ;
+            e.composedPath()[0].vrc.render() ;
         }
         this.clrm.image.onload = (e) => this.clrm.image.init(e) ;
     }
