@@ -10115,6 +10115,132 @@ void main()
 
 
 
+var phaseDisplay = { value : `#version 300 es 
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * phaseDisplay.frag : displays the phase values on the screen
+ *
+ * PROGRAMMER   :   ABOUZAR KABOUDIAN
+ * DATE         :   Mon 09 Nov 2020 11:20:50 (EST)
+ * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float ;
+precision highp int ;
+
+in vec2 cc ;
+uniform sampler2D   icolor ;
+
+out vec4 ocolor ;
+
+#define     u   color.r
+#define     v   color.g
+void main(){
+    vec4 color = texture( icolor, cc ) ;
+
+    if ( u > 0.5 ){
+        ocolor = vec4( .8, 0.,0.,1. ) ;
+        return ;
+    }
+
+    if ( v>0.5 ){
+        ocolor = vec4(.378,0.639,0.851,1.) ;
+        return ;
+    }
+
+    ocolor=vec4(0) ;
+    //ocolor= vec4(vec3(0.99),1.) ;
+    return ;
+}` } ;
+
+
+
+var phaseInit = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * phaseInit.frag : initial the phase textures for the PhasePlot
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Mon 09 Nov 2020 12:31:13 (EST)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float ;
+precision highp int ;
+
+layout (location = 0) out vec4 ocolor1 ;
+layout (location = 1) out vec4 ocolor2 ;
+
+void main(){
+    ocolor1 = vec4(0.) ;
+    ocolor2 = vec4(0.) ;
+    return ;
+}` } ;
+
+
+
+var phaseUpdate = { value : `#version 300 es 
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * phaseUpdate.frag : updates the phase value of at the probe location
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Mon 09 Nov 2020 11:00:51 (EST)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float ;
+precision highp int ;
+
+in vec2 cc ;
+
+uniform sampler2D   icolor ;    /*  
+                                    previous texture's color:
+                                    the red channel represents a current
+                                    value of the phase in the phase-space.
+
+                                    the green channel represents the
+                                    previous points visited in the phase
+                                    space.
+                                 */
+uniform sampler2D   xcolor ;   /* texture to read the horizontal value in
+                                  phase-space from */
+uniform sampler2D   ycolor ;   /* texture to read the vertical value in
+                                  the phase-space from */
+
+uniform vec4        xMultiplier ; /* channel multiplier for the horizontal
+                                     value */
+uniform vec4        yMultiplier ; /* channel multiplier for the vertical
+                                     value */
+
+uniform float       xMin, xMax, yMin, yMax ;/* range of x and y */
+
+uniform vec2        probePosition ; /* position of the probe */
+
+#define probe       probePosition
+
+layout (location = 0) out vec4 ocolor ;
+
+void main(){
+    vec4  color  = texture( icolor, cc ) ;
+    float x     = (dot( xMultiplier, texture( xcolor,probe ) ) - xMin)
+                /(xMax-xMin)  ;
+    float y     = (dot( yMultiplier, texture( ycolor,probe ) ) - yMin) 
+                /(yMax-yMin) ;
+
+    if ( color.r > 0.5 ){
+        color.g = 1. ;
+        color.r = 0. ;
+    }
+
+    if ( length(cc-vec2(x,y)) < 0.013 ){
+        color.r = 1. ;
+    }
+
+    ocolor = vec4(color) ;
+
+    return ;
+}` } ;
+
+
+
 var sctwShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * sctwShader   :  scales the time window
@@ -12513,8 +12639,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.4.07' ;
-var updateTime = 'Wed 16 Sep 2020 16:53:51 (EDT)';
+var version = 'v6.4.08' ;
+var updateTime = 'Mon 09 Nov 2020 14:24:32 (EST)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -16693,6 +16819,540 @@ class SignalPlot{
     } ;
 
 }  /* End of SignalPlot */
+
+/*========================================================================
+ * PhasePlot    
+ *========================================================================
+ */
+class PhasePlot{
+    constructor(opts={}){
+        this._canvas = readOptions( opts.canvas, null ) ;
+        this._xcolor = readOptions( opts.xcolor, null ) ;
+        this._ycolor = readOptions( opts.ycolor, this._xcolor ) ;
+        this._xmin   = readOptions( opts.xmin , 0. ) ;
+        this._xmax   = readOptions( opts.xmax , 1. ) ;
+        this._ymin   = readOptions( opts.ymin , 0. ) ;
+        this._ymax   = readOptions( opts.ymax , 1. ) ;
+        this._xchannel= readOptions(opts.xchannel, 'r' ) ;
+        this._ychannel= readOptions(opts.ychannel, 'g' ) ;
+        this._probePosition = readOptions(opts.probePosition, [0.5,0.5] ) ;
+
+
+        this._nx    = readOptions( opts.nx , 5 ) ;
+        this._ny    = readOptions( opts.ny , 5 ) ;
+        this._grid  = readOptions( opts.grid, 'off' ) ;
+        this._gridColor  = readOption( opts.gridColor,'#999999') ;
+        this._gridDash   = readOption( opts.gridDash, [10,10]  ) ;
+
+
+        this.xticks = new Ticks( opts.xticks ) ;
+        this.xticks.min = this.xmin ;
+        this.xticks.max = this.xmax ;
+        this.xticks.number = this.nx - 1 ;
+        
+        this.yticks = new Ticks( opts.yticks ) ;
+        this.yticks.min = this.ymin ;
+        this.yticks.max = this.ymax ;
+        this.yticks.number = this.ny - 1 ;
+
+        if (!this.canvas){
+            console.error("No canvas is provided!\n"+
+                    "Please, provide a canvas to draw on!") ;
+            return null ;
+        }
+        this.context = this.canvas.getContext('2d') ;
+
+        if (!this.xcolor){
+            console.error("No xcolor texture was provided!") ;
+            return null ;
+        }
+
+        this.fphase = new Float32Texture( this.width , this.height ) ;
+        this.sphase = new Float32Texture( this.width , this.height ) ;
+
+        // initializes phase textures
+        this.phaseInit = new Solver({
+            fragmentShader : phaseInit.value ,
+            targets : { 
+                ocolor1 : { location : 0 , target: this.fphase } ,
+                ocolor2 : { location : 1 , target: this.sphase } ,
+            }
+        } ) ;
+
+        this.phaseInit.render() ;
+
+        // updates the phase texture
+        this.phase = new Solver({
+            fragmentShader : phaseUpdate.value ,
+            uniforms : {
+                icolor      : { type : 's', value : this.fphase     } ,
+                
+                xcolor      : { type : 's', value : this.xcolor     } ,
+                xMultiplier : { type : 'v4',value : this.xMultiplier} ,
+                xMin        : { type : 'f', value : this.xmin       } ,
+                xMax        : { type : 'f', value : this.xmax       } ,
+
+                ycolor      : { type : 's', value : this.ycolor     } ,
+                yMultiplier : { type : 'v4',value : this.yMultiplier} ,
+                yMin        : { type : 'f', value : this.ymin       } ,
+                yMax        : { type : 'f', value : this.ymax       } ,
+
+                probePosition:{ type : 'v2',value : this.probePosition},
+            } ,
+            targets : { 
+                ocolor : { location : 0 , target : this.sphase } ,
+            }
+        } ) ;
+
+        this.phaseCopy = new Copy( this.sphase, this.fphase ) ;
+
+        this.fcanvas = document.createElement('canvas') ;
+        this.fcanvas.width = this.width ;
+        this.fcanvas.height = this.height ;
+
+        this.phaseDisplay = new Solver({
+            fragmentShader : phaseDisplay ,
+            uniforms : {
+                icolor : { type : 't', value : this.fphase } ,
+            } ,
+            canvas : this.fcanvas
+        } ) ;
+
+        this.messages = [] ;
+        
+
+        // background canvas 
+        this.bcanvas = document.createElement('canvas') ;
+        this.bcanvas.width = this.width ;
+        this.bcanvas.height = this.height ;
+        this.bcontext= this.bcanvas.getContext('2d') ;
+
+        // title
+        var titleOptions = readOption( opts.title, {} ) ;
+        this.title = {} ;
+        this.title.text = readOption(titleOptions.text, '' ) ;
+        this.title.x = readOption( titleOptions.x , 0.5  ) ;
+        this.title.y = readOption( titleOptions.y , 0.05 ) ;
+        this.title.style = readOption( titleOptions.style,  "#000000"   ) ;
+        this.title.font = readOption( titleOptions.font, '12pt Times'   ) ;
+        this.title.visible = readOption( titleOptions.visible, true     ) ;
+        this.title.align = readOption( titleOptions.align, 'center'     ) ;
+        this.messages.push( this.title ) ;
+
+        this.initBackground() ;
+
+    } /* end of PhasePlot constructor */
+
+    get canvas(){
+        return this._canvas ;
+    }
+
+    get width(){
+        return this.canvas.width ;
+    }
+
+    get height(){
+        return this.canvas.height ;
+    }
+
+    // grid ..............................................................
+    get grid(){
+        if (    this._grid == 'on' || 
+                this._grid == 'ON' || 
+                this._grid == 'On' ||
+                this._grid === true ){
+            return true ;
+        }else{
+            return false ;
+        }
+    }
+    set grid(nv){
+        if ( nv === 'on' || nv==='On' || nv === 'ON' || nv === true ){
+            this._grid = true ;
+        }else{
+            this._grid = false ;
+        }
+        this.initBackhround() ;
+    }
+
+    // gridColor .........................................................
+    get gridColor(){
+        return this._gridColor ;
+    }
+    set gridColor(nc){
+        this._gridColor = nc ;
+        this.initBackground() ;
+    }
+
+    // gridDash ..........................................................
+    get gridDash(){
+        return this._gridDash ;
+    }
+    set gridDash(nd){
+        this._gridDash = nd ;
+        this.initBackground() ;
+    }
+
+    // nx, ny ............................................................
+    get nx(){
+        return this._nx ;
+    }
+
+    get ny(){
+        return this._ny ;
+    }
+
+    set nx(nv){
+        this._nx = nv ;
+        this.xticks.number = this.nx -1 ;
+        this.init() ;
+    }
+    set ny(nv){
+        this._ny = nv ;
+        this.yticks.number = this.ny - 1 ;
+        this.init() ;
+    }
+
+    // xcolor ............................................................
+    get xcolor(){
+        return this._xcolor ;
+    }
+
+    set xcolor(nc){
+        this._xcolor = readOption( this.xcolor, nc ) ;
+        this.phase.uniforms.xcolor.value = this.xcolor ;
+        return ;
+    }
+
+    set xColor(nc){
+        this.xcolor = nc ;
+    }
+    
+    get xColor(){
+        return this.xcolor ;
+    }
+    
+    // xchannel ..........................................................
+    get xchannel(){
+        return this._xchannel ;
+    }
+    get xChannel(){
+        return this.xchannel ;
+    }
+
+    set xchannel(nc){
+        this._xchannel = nc ;
+        this.phase.uniforms.xMultiplier.value = this.xMultiplier ;
+        return ;
+    }
+
+    set xChannel(nc){
+        this.xchannel = nc ;
+        return ;
+    }
+
+    get xMultiplier(){
+        return getChannelMultiplier( this.xchannel) ;
+    }
+
+    // ycolor ............................................................
+    get ycolor(){
+        return this._ycolor ;
+    }
+    get yColor(){
+        return this.ycolor ;
+    }
+
+    set ycolor(nc){
+        this._ycolor = readOption( this.ycolor, nc ) ;
+        this.phase.uniforms.ycolor.value = this.ycolor ;
+        return ;
+    }
+    set yColor(nc){
+        this.ycolor = nc ;
+        return ;
+    }
+
+    // ychannel ..........................................................
+    get ychannel(){
+        return this._ychannel ;
+    }
+    get yChannel(){
+        return this.ychannel ;
+    }
+
+    set ychannel(nc){
+        this._ychannel = nc ;
+        this.phase.uniforms.yMultiplier.value = this.yMultiplier ;
+    }
+    set yChannel(nc){
+        this.ychannel = nc ;
+    }
+
+    get yMultiplier(){
+        return getChannelMultiplier( this.ychannel ) ;
+    }
+
+
+    // xmin, xmax ........................................................
+    get xmin(){
+        return this._xmin ;
+    }
+    get xMin(){
+        return this.xmin ;
+    }
+
+    get xmax(){
+        return this._xmax ;
+    }
+
+    get xMax(){
+        return this.xmax ;
+    }
+
+    set xmin(nv){
+        this._xmin = nv ;
+        this.phase.uniforms.xMin.value = this.xmin ;
+        this.xticks.min = this.xmin ;
+        this.init() ;
+    }
+
+    set xMin(nv){
+        this.xmin = nv ;
+    }
+
+    set xmax(nv){
+        this._xmax = nv ;
+        this.phase.uniforms.xMax.value = this.xmax ;
+        this.xticks.max = this.xmax ;
+        this.init() ;
+    }
+    set xMax(nv){
+        this.xmax = nv ;
+    }
+
+    // ymin, ymax ........................................................
+    get ymin(){
+        return this._ymin ;
+    }
+    get ymax(){
+        return this._ymax ;
+    }
+    get ymax(){
+        return this._ymax ;
+    }
+
+    get yMax(){
+        return this.ymax ;
+    }
+
+    set ymin(nv){
+        this._ymin = nv ;
+        this.phase.uniforms.yMin.value = this.ymin ;
+        this.yticks.min = this.ymin ;
+        this.init() ;
+    }
+
+    set yMin(nv){
+        this.ymin = nv ;
+    }
+
+    set ymax(nv){
+        this._ymax = nv ;
+        this.phase.uniforms.yMax.value = this.ymax ;
+        this.yticks.max = this.ymax ;
+        this.init() ;
+    }
+    set yMax(nv){
+        this.ymax = nv ;
+    }
+
+    // probe position ....................................................
+    get probePosition(){
+        return this._probePosition ;
+    }
+    set probePosition(np){
+        this._probePosition = np ;
+        this.phase.uniforms.probePosition.value = this.probePosition ;
+    }
+    
+/*------------------------------------------------------------------------
+ * methods
+ *------------------------------------------------------------------------
+ */
+    // addMessage --------------------------------------------------------
+    addMessage ( message, x, y, options){
+        var msg = new Message( message,x,y, options) ;
+        this.messages.push(msg) ;
+        this.initBackground() ;
+        return msg ;
+    }
+
+
+    // setTitle ----------------------------------------------------------
+    setTitle(text, options={}){
+        this.title.text = text ;
+        this.title.x    = readOption( options.x , this.title.x         ) ;
+        this.title.y    = readOption( options.y , this.title.y         ) ;
+        this.title.style= readOption( options.style, this.title.style  ) ;
+        this.title.font = readOption( options.font,  this.title.font   ) ;
+        this.title.visible = readOption( options.visible,
+                this.title.visible ) ;
+        this.title.align= readOption( options.align,this.title.align  ) ;
+
+        this.messages.push( this.title ) ;
+        this.initBackground() ;
+        this.render() ;
+    }
+
+    // writeMessages -----------------------------------------------------
+    writeMessages(){
+        for (var i=0 ; i < this.messages.length; i++){
+            var message = this.messages[i] ;
+            if (message.visible){
+                this.bcontext.font = message.font ;
+                this.bcontext.fillStyle = message.style ;
+                this.bcontext.textAlign = message.align ;
+                this.bcontext.fillText( message.text,
+                                        this.canvas.width*message.x,
+                                        this.canvas.height*message.y );
+            }
+        }
+    }
+
+    // setXTicks ---------------------------------------------------------
+    setXTicks(xt){
+        if ( xt.ticks != undefined ){
+            this.xticks.ticks = xt.ticks ;
+        }
+        if ( xt.mode != undefined ){
+            this.xticks.mode = xt.mode ;
+        }
+        if ( xt.unit != undefined ){
+            this.xticks.unit = xt.unit ;
+        }
+        if ( xt.style != undefined ){
+            this.xticks.style = xt.style ;
+        }
+        if ( xt.font != undefined ){
+            this.xticks.font = xt.font ;
+        }
+        this.initBackground() ;
+    }
+
+    // setYTicks ---------------------------------------------------------
+    setYTicks (yt){
+        if ( yt.ticks != undefined ){
+            this.yticks.ticks = yt.ticks ;
+        }
+        if ( yt.mode != undefined ){
+            this.yticks.mode = yt.mode ;
+        }
+        if ( yt.unit != undefined ){
+            this.yticks.unit = yt.unit ;
+        }
+        if ( yt.style != undefined ){
+            this.yticks.style = yt.style ;
+        }
+        if ( yt.font != undefined ){
+            this.yticks.font = yt.font ;
+        }
+        if ( yt.min != undefined ){
+            this.yticks.min = yt.min ;
+        }
+        if ( yt.max != undefined ){
+            this.yticks.max = yt.max ;
+        }
+        this.initBackground() ;
+    }
+
+    // writeTicks --------------------------------------------------------
+    writeTicks(){
+        if (this.xticks.mode != 'off' ){
+            this.bcontext.font = this.xticks.font ;
+            this.bcontext.fillStyle = this.xticks.style ;
+            this.bcontext.textAlign = "center" ;
+            for (var i=1; i<=this.xticks.number ;i++){
+                var dx = this.canvas.width / (this.xticks.number+1)
+                var dy = this.canvas.height/ (this.ny) ;
+                this.bcontext.fillText(
+                    this.xticks.labels[i-1] ,
+                    i*dx,
+                    this.canvas.height*(1.-this.xticks.offset) 
+                ) ;
+            }
+        }
+        if ( this.yticks.mode != 'off' ){
+            this.bcontext.font = this.yticks.font ;
+            this.bcontext.fillStyle = this.yticks.style ;
+            this.bcontext.textAlign = "start" ;
+            for (var i=1; i<=this.yticks.number ;i++){
+                var dy = this.canvas.height
+                        /(this.yticks.number+1) ;
+
+                this.bcontext.fillText(
+                    this.yticks.labels[i-1],
+                    this.yticks.offset*this.canvas.width,
+                    this.canvas.height-i*dy
+                ) ;
+            }
+        }
+    }
+    
+    // initBackground ----------------------------------------------------
+    initBackground (){
+        this.phaseInit.render() ;
+        this.bcontext.clearRect(
+            0,
+            0,
+            this.width,
+            this.height
+        ) ;
+        if ( this.grid ){
+            this.bcontext.beginPath() ;
+            this.bcontext.setLineDash(this.gridDash) ;
+            this.bcontext.strokeStyle= this.gridColor ;
+            this.bcontext.lineWidth = 1 ;
+            var dx = this.width / (this.nx) ;
+            var dy = this.height/ (this.ny) ;
+            for (var i=1; i<this.nx ; i++){
+                this.bcontext.strokeStyle=this.gridColor ;
+                this.bcontext.moveTo(i*dx,0) ;
+                this.bcontext.lineTo(i*dx,this.canvas.height) ;
+                this.bcontext.stroke() ;
+            }
+            for (var j=1; j<this.ny ; j++){
+                this.bcontext.strokeStyle=this.gridColor ;
+                this.bcontext.moveTo(0,j*dy) ;
+                this.bcontext.lineTo(this.canvas.width,j*dy) ;
+                this.bcontext.stroke() ;
+            }
+        }
+        this.writeTicks() ;
+        this.writeMessages() ;
+        this.render() ;
+    }
+
+    // init --------------------------------------------------------------
+    init(){
+        this.initBackground() ;
+    }
+
+    // update ------------------------------------------------------------
+    update(){
+        this.phase.render() ;
+        this.phaseCopy.render() ;
+    }
+    // render ------------------------------------------------------------
+    render(){
+        this.update() ;
+        this.phaseDisplay.render() ;
+        this.context.clearRect( 0,0, this.width, this.height ) ;
+        this.context.drawImage( this.bcanvas, 0,0 ) ;
+        this.context.drawImage( this.fcanvas, 0,0 ) ;
+    }
+}
+
 
 /*========================================================================
  * Curve        : Curve Structure
@@ -22229,6 +22889,7 @@ this.setUniformsInSolvers= setUniformsInSolvers ;
 this.resizeRenderTargets = resizeRenderTargets ;
 this.copyTexture         = copyTexture ;
 this.SignalPlot          = SignalPlot ;
+this.PhasePlot           = PhasePlot ;
 this.Plot1D              = Plot1D ;
 this.Plot2D              = Plot2D ;
 this.Tvsx                = Tvsx ;

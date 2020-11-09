@@ -655,6 +655,132 @@ void main()
 
 
 
+var phaseDisplay = { value : `#version 300 es 
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * phaseDisplay.frag : displays the phase values on the screen
+ *
+ * PROGRAMMER   :   ABOUZAR KABOUDIAN
+ * DATE         :   Mon 09 Nov 2020 11:20:50 (EST)
+ * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float ;
+precision highp int ;
+
+in vec2 cc ;
+uniform sampler2D   icolor ;
+
+out vec4 ocolor ;
+
+#define     u   color.r
+#define     v   color.g
+void main(){
+    vec4 color = texture( icolor, cc ) ;
+
+    if ( u > 0.5 ){
+        ocolor = vec4( .8, 0.,0.,1. ) ;
+        return ;
+    }
+
+    if ( v>0.5 ){
+        ocolor = vec4(.378,0.639,0.851,1.) ;
+        return ;
+    }
+
+    ocolor=vec4(0) ;
+    //ocolor= vec4(vec3(0.99),1.) ;
+    return ;
+}` } ;
+
+
+
+var phaseInit = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * phaseInit.frag : initial the phase textures for the PhasePlot
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Mon 09 Nov 2020 12:31:13 (EST)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float ;
+precision highp int ;
+
+layout (location = 0) out vec4 ocolor1 ;
+layout (location = 1) out vec4 ocolor2 ;
+
+void main(){
+    ocolor1 = vec4(0.) ;
+    ocolor2 = vec4(0.) ;
+    return ;
+}` } ;
+
+
+
+var phaseUpdate = { value : `#version 300 es 
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * phaseUpdate.frag : updates the phase value of at the probe location
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Mon 09 Nov 2020 11:00:51 (EST)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float ;
+precision highp int ;
+
+in vec2 cc ;
+
+uniform sampler2D   icolor ;    /*  
+                                    previous texture's color:
+                                    the red channel represents a current
+                                    value of the phase in the phase-space.
+
+                                    the green channel represents the
+                                    previous points visited in the phase
+                                    space.
+                                 */
+uniform sampler2D   xcolor ;   /* texture to read the horizontal value in
+                                  phase-space from */
+uniform sampler2D   ycolor ;   /* texture to read the vertical value in
+                                  the phase-space from */
+
+uniform vec4        xMultiplier ; /* channel multiplier for the horizontal
+                                     value */
+uniform vec4        yMultiplier ; /* channel multiplier for the vertical
+                                     value */
+
+uniform float       xMin, xMax, yMin, yMax ;/* range of x and y */
+
+uniform vec2        probePosition ; /* position of the probe */
+
+#define probe       probePosition
+
+layout (location = 0) out vec4 ocolor ;
+
+void main(){
+    vec4  color  = texture( icolor, cc ) ;
+    float x     = (dot( xMultiplier, texture( xcolor,probe ) ) - xMin)
+                /(xMax-xMin)  ;
+    float y     = (dot( yMultiplier, texture( ycolor,probe ) ) - yMin) 
+                /(yMax-yMin) ;
+
+    if ( color.r > 0.5 ){
+        color.g = 1. ;
+        color.r = 0. ;
+    }
+
+    if ( length(cc-vec2(x,y)) < 0.013 ){
+        color.r = 1. ;
+    }
+
+    ocolor = vec4(color) ;
+
+    return ;
+}` } ;
+
+
+
 var sctwShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * sctwShader   :  scales the time window
