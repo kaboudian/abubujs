@@ -12639,8 +12639,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.4.08' ;
-var updateTime = 'Mon 09 Nov 2020 14:24:32 (EST)';
+var version = 'v6.4.09' ;
+var updateTime = 'Tue 17 Nov 2020 12:20:50 (EST)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -13602,8 +13602,8 @@ class Float32Texture extends Texture{
         this.temp = new Float32Texture( this.width, this.height) ;
         copyTexture(target, this.temp ) ;
 
-        this.width = width ;
-        this.height = height ;
+        this._width = width ;
+        this._height = height ;
         gl.bindTexture(gl.TEXTURE_2D, this.texture) ;
         gl.texImage2D(  gl.TEXTURE_2D, 0 , gl.RGBA32F,
                         this.width,
