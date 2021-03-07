@@ -13594,21 +13594,21 @@ class Float32Texture extends Texture{
         super(w,h,'rgba32f','rgba','float',options) ;
     }
    
-    resize( width, height ){
+    resize( width, height, copy ){
         var target = {} ;
         target.texture = this.texture ;
         target.width   = this.width ;
         target.height  = this.height ;
-        this.temp = new Float32Texture( this.width, this.height) ;
-        copyTexture(target, this.temp ) ;
+        var temp = new Float32Texture( this.width, this.height) ;
+        copyTexture(target, temp ) ;
 
-        this.width = width ;
-        this.height = height ;
+        this._width = width ;
+        this._height = height ;
         gl.bindTexture(gl.TEXTURE_2D, this.texture) ;
         gl.texImage2D(  gl.TEXTURE_2D, 0 , gl.RGBA32F,
                         this.width,
                         this.height, 0, gl.RGBA, gl.FLOAT, null ) ;
-        copyTexture(this.temp, target ) ;
+        copyTexture(temp, target ) ;
     }
 }
 

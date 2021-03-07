@@ -12640,7 +12640,7 @@ function getColormaps(){
 
 
 var version = 'v6.4.09' ;
-var updateTime = 'Tue 17 Nov 2020 12:20:50 (EST)';
+var updateTime = 'Thu 10 Dec 2020 18:04:12 (EST)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -13594,13 +13594,13 @@ class Float32Texture extends Texture{
         super(w,h,'rgba32f','rgba','float',options) ;
     }
    
-    resize( width, height ){
+    resize( width, height, copy ){
         var target = {} ;
         target.texture = this.texture ;
         target.width   = this.width ;
         target.height  = this.height ;
-        this.temp = new Float32Texture( this.width, this.height) ;
-        copyTexture(target, this.temp ) ;
+        var temp = new Float32Texture( this.width, this.height) ;
+        copyTexture(target, temp ) ;
 
         this._width = width ;
         this._height = height ;
@@ -13608,7 +13608,7 @@ class Float32Texture extends Texture{
         gl.texImage2D(  gl.TEXTURE_2D, 0 , gl.RGBA32F,
                         this.width,
                         this.height, 0, gl.RGBA, gl.FLOAT, null ) ;
-        copyTexture(this.temp, target ) ;
+        copyTexture(temp, target ) ;
     }
 }
 
