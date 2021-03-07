@@ -1,5 +1,5 @@
-var version = 'v6.4.09' ;
-var updateTime = 'Tue 17 Nov 2020 12:20:50 (EST)';
+var version = 'v6.5.01' ;
+var updateTime = 'Sat 06 Mar 2021 17:31:58 (EST)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -1373,10 +1373,22 @@ class RgbaCompressedData{
 
         this.compressedTable =
             new Float32Array(this.compressedSize*this.compressedSize*4  ) ;
-        this.decompressionMapTable =
+
+
+        
+        this.fullTexelCrdtTable =
             new Float32Array(this.compressedSize*this.compressedSize*4  ) ;
-        this.compressionMapTable =
+
+        this.fullTexelIndexTable = 
+            new Uint32Array(this.compressedSize*this.compressedSize*4  ) ;
+
+
+        this.compressedTexelCrdtTable =
             new Float32Array(this.width*this.height * 4 ) ;
+        
+        this.compressedTexelIndexTable =
+            new Uint32Array(this.width*this.height * 4 ) ;
+
 
 /*------------------------------------------------------------------------
  * compress data
@@ -1397,12 +1409,27 @@ class RgbaCompressedData{
 
                     var nindx = ii + jj*this.compressedSize ;
 
-                    this.compressionMapTable[indx*4     ]   = x ;
-                    this.compressionMapTable[indx*4 + 1 ]   = y ;
-                    this.decompressionMapTable[nindx*4  ]   =
+                    this.compressedTexelCrdtTable[indx*4     ]      = x ;
+                    this.compressedTexelCrdtTable[indx*4 + 1 ]      = y ;
+                    this.compressedTexelCrdtTable[indx*4 + 2 ]      = 1 ;
+                    this.compressedTexelCrdtTable[indx*4 + 3 ]      = 1 ;
+                    
+                    this.compressedTexelIndexTable[indx*4  ]        = ii ;
+                    this.compressedTexelIndexTable[indx*4+1]        = jj ;
+                    this.compressedTexelIndexTable[indx*4+2]        = 1 ;
+                    this.compressedTexelIndexTable[indx*4+3]        = 1 ;
+
+                    this.fullTexelCrdtTable[nindx*4  ]        =
                         i/this.width + 0.5/this.width ;
-                    this.decompressionMapTable[nindx*4+1]   =
+                    this.fullTexelCrdtTable[nindx*4+1]        =
                         j/this.height+ 0.5/this.height ;
+                    this.fullTexelCrdtTable[nindx*4+2]        = 1. ;
+                    this.fullTexelCrdtTable[nindx*4+3]        = 1. ;
+
+                    this.fullTexelIndexTable[ nindx*4    ]    = i ;
+                    this.fullTexelIndexTable[ nindx*4 +1 ]    = j ;
+                    this.fullTexelIndexTable[ nindx*4 +2 ]    = 1 ;
+                    this.fullTexelIndexTable[ nindx*4 +3 ]    = 1 ;
 
                     for (var k = 0 ; k<4 ; k++){
                         this.compressedTable[nindx*4+k]
@@ -1410,10 +1437,14 @@ class RgbaCompressedData{
                     }
                     num++ ;
                 }else{
-                    this.compressionMapTable[indx*4     ]
+                    this.compressedTexelCrdtTable[indx*4     ]
                         = 1.-0.5/this.compressedSize ;
-                    this.compressionMapTable[indx*4 + 1 ]
+                    this.compressedTexelCrdtTable[indx*4 + 1 ]
                         = 1.-0.5/this.compressedSize ;
+                    this.compressedTexelCrdtTable[indx*4 + 2 ]
+                        = 0. ;
+                    this.compressedTexelCrdtTable[indx*4 + 3 ]
+                        = 0. ;
                 }
 
             }
@@ -1449,8 +1480,8 @@ class RgbaCompressedData{
             }
         ) ;
 
-        this.compressionMap     = new TableTexture(
-            this.compressionMapTable,
+        this.compressedTexelCrdt     = new TableTexture(
+            this.compressedTexelCrdtTable,
             this.width,
             this.height ,
             {
@@ -1458,9 +1489,15 @@ class RgbaCompressedData{
                 magFilter : 'nearest'
             }
         ) ;
+        this.compressedTexelIndex = new Uint32Texture(
+            this.width , this.height ,
+            { 
+                data : this.compressedTexelIndexTable 
+            } 
+        ) ;
 
-        this.decompressionMap   = new TableTexture(
-            this.decompressionMapTable ,
+        this.fullTexelCrdt   = new TableTexture(
+            this.fullTexelCrdtTable ,
             this.compressedSize ,
             this.compressedSize ,
             {
@@ -1468,6 +1505,14 @@ class RgbaCompressedData{
                 magFilter : 'nearest'
             }
         ) ;
+
+        this.fullTexelIndex  = new Uint32Texture(
+            this.compressedSize, this.compressedSize ,
+            {
+                data : this.fullTexelIndexTable 
+            } 
+        ) ;
+        
     }   
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *  CONSTRUCTOR ENDS
@@ -1478,6 +1523,21 @@ class RgbaCompressedData{
  * getCompressionRatio
  *------------------------------------------------------------------------
  */
+    get decompressionMapTable(){
+        return this.fullTexelCrdtTable ;
+    }
+    get compressionMapTable(){
+        return this.compressedTexelCrdtTable ;
+    }
+
+    get compressionMap(){
+        return this.compressedTexelCrdt ;
+    }
+
+    get decompressionMap(){
+        return this.fullTexelCrdt ;
+    }
+
     getCompressionRatio(){
         return (    this.compressedSize*this.compressedSize/
                     (this.width*this.height)                ) ;
@@ -6620,6 +6680,9 @@ class VolumeRayCaster{
  */
         this.colormapList   = getColormapList() ;
         this.colormaps      = getColormaps(this.colormapList) ;
+        this.eye = readOption(opts.eye, [2,2,2]) ;
+        this.center= readOption(opts.center , [0,0,0]) ;
+        this.up    = readOption(opts.up ,   [0,1,0]) ;
 
 /*------------------------------------------------------------------------
  * reading options
@@ -6901,7 +6964,7 @@ class VolumeRayCaster{
         mat4.identity(  this.viewMatrix                  ) ;
 
         mat4.lookAt(    this.viewMatrix,
-                        [2,2,2],[0,0,0],[0,1,0]     ) ;
+                        this.eye,this.center,this.up     ) ;
 
         this.viewMatrix.onchange= function(){
             log('hehehe') ;
