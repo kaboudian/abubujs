@@ -1,5 +1,5 @@
-var version = 'v6.5.01' ;
-var updateTime = 'Sat 06 Mar 2021 17:31:58 (EST)';
+var version = 'v6.5.02' ;
+var updateTime = 'Tue 09 Mar 2021 21:04:45 (EST)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -139,15 +139,13 @@ function OrbitalCameraControl ( mViewMatrix,
         }
     };
 
-    this.up = vec3.fromValues(0,1,0) ;
-
     this._mtxTarget = mViewMatrix;
     this._radius = mRadius;
     this._targetRadius = mRadius;
     this._listenerTarget = mListenerTarget;
     this._isDown = false;
     this._rotation = mat4.create();
-    this.center = vec3.create();
+    this.center = readOption(opts.center, vec3.create());
 
     this.easing = .5;
     this.senstivity = 1.0;
@@ -6682,6 +6680,9 @@ class VolumeRayCaster{
         this.colormaps      = getColormaps(this.colormapList) ;
         this.eye = readOption(opts.eye, [2,2,2]) ;
         this.center= readOption(opts.center , [0,0,0]) ;
+        this.prevx = readOption(opts.prevx, -0.4 ) ;
+        this.prevy = readOption(opts.prevy, 0.4  ) ;
+        this.radius = readOption(opts.radius, 4. ) ;
         this.up    = readOption(opts.up ,   [0,1,0]) ;
 
 /*------------------------------------------------------------------------
@@ -6945,14 +6946,22 @@ class VolumeRayCaster{
  * transformation matrices
  *------------------------------------------------------------------------
  */
+        this._rotationX = readOption(opts.rotationX, -Math.PI/2.) ;
+        this._rotationY = readOption(opts.rotationY, 0) ;
+        this._rotationZ = readOption(opts.rotationZ, 0) ;
+
         /* modelMatrix  */
-        this.modelMatrix = mat4.create() ;
-        mat4.identity(  this.modelMatrix                 ) ;
+        this._modelMatrix = mat4.create() ;
+        mat4.identity(  this._modelMatrix                 ) ;
 
-        mat4.rotate(    this.modelMatrix, this.modelMatrix,
-                        -Math.PI/2.,[1.,0.,0.]      ) ;
+        mat4.rotate(    this.modelMatrix, this._modelMatrix,
+                        this._rotationX ,[1.,0.,0.]      ) ;
+        mat4.rotate(    this.modelMatrix, this._modelMatrix,
+                        this._rotationY ,[0.,1.,0.]      ) ;
+        mat4.rotate(    this.modelMatrix, this._modelMatrix,
+                        this._rotationZ ,[0.,0.,1.]      ) ;
 
-        mat4.translate( this.modelMatrix, this.modelMatrix,
+        mat4.translate( this._modelMatrix, this._modelMatrix,
                         [-0.5,-0.5,-0.5]            ) ;
 
         /* viewMatrix   */
@@ -6972,10 +6981,12 @@ class VolumeRayCaster{
 
         this.controler = new OrbitalCameraControl(
             this.viewMatrix,
-            4.0 , this.canvas,
+            this.radius , this.canvas,
             {
-                prevx: -.4,
-                prevy: 0.4,
+                prevx: this.prevx,
+                prevy: this.prevy,
+                center: this.center ,
+                up : this.up
             }
         ) ;
 
@@ -7387,6 +7398,58 @@ class VolumeRayCaster{
  *  CONSTRUCTOR ENDS
  *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
+
+    // get and set modelMatrix ...........................................
+    get modelMatrix(){
+        return this._modelMatrix ;
+    }
+    setModelMatrix(){
+        this._modelMatrix = mat4.create() ;
+        mat4.identity(  this._modelMatrix                 ) ;
+
+        mat4.rotate(    this.modelMatrix, this._modelMatrix,
+                        this._rotationX ,[1.,0.,0.]      ) ;
+        mat4.rotate(    this.modelMatrix, this._modelMatrix,
+                        this._rotationY ,[0.,1.,0.]      ) ;
+        mat4.rotate(    this.modelMatrix, this._modelMatrix,
+                        this._rotationZ ,[0.,0.,1.]      ) ;
+
+        mat4.translate( this._modelMatrix, this._modelMatrix,
+                        [-0.5,-0.5,-0.5]            ) ;
+
+        
+        this.pass1.uniforms.modelMatrix.value = this.modelMatrix ;
+        this.pass2.uniforms.modelMatrix.value = this.modelMatrix ;
+        this.frameSol.uniforms.modelMatrix.value = this.modelMatrix ;
+        this.projectCrds.uniforms.modelMatrix.value = this.modelMatrix ;
+    }
+
+    get rotationX(){
+        return this._rotationX ;
+    }
+    get rotationY(){
+        return this._rotationY ;
+    }
+    get rotationZ(){
+        return this._rotationZ ;
+    }
+
+    set rotationX(nv){
+        this._rotationX = nv ;
+        this.setModelMatrix() ;
+    }
+    
+    set rotationY(nv){
+        this._rotationY = nv ;
+        this.setModelMatrix() ;
+    }
+
+    set rotationZ(nv){
+        this._rotationZ = nv ;
+        this.setModelMatrix() ;
+    }
+
+
     
 /*------------------------------------------------------------------------
  * setClickPenetration
