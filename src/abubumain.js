@@ -1,5 +1,5 @@
 var version = 'v6.5.03' ;
-var updateTime = 'Mon 29 Mar 2021 12:36:03 (EDT)';
+var updateTime = 'Mon 29 Mar 2021 17:59:35 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -644,6 +644,7 @@ class Texture{
         this._magFilter = readOption( options.magFilter , 'nearest' ) ;
         this._data      = readOption(   options.data ,
                                         null                ) ;
+        this.keepData   = options?.keepData ?? false ;
 
 /*------------------------------------------------------------------------
  * bind and set texture
@@ -856,7 +857,9 @@ class Texture{
     }
 
     set data(new_data){
-        this._data = new_data ;
+        if ( this.keepData ){
+            this._data = new_data ;
+        }
         this.updateData(new_data) ;
     }
 
@@ -869,6 +872,10 @@ class Texture{
                     GL(this.format), GL(this.type) ,
                     this.data    ) ;
         gl.bindTexture(gl.TEXTURE_2D, null) ;
+
+        if (!this.keepData){
+            this._data = null ;
+        }
     }
 
     update( nd ){
@@ -1511,6 +1518,12 @@ class RgbaCompressedData{
             } 
         ) ;
         
+        this.data                       = null ;
+        this.compressedTable            = null ;
+        this.compressedTexelCrdtTable   = null ;
+        this.compressedTexelIndexTable  = null ;
+        this.fullTexelCrdtTable         = null ;
+        this.fullTexelIndexTable        = null ;
     }   
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *  CONSTRUCTOR ENDS
@@ -7402,7 +7415,7 @@ class VolumeRayCaster{
         return this._compMap ;
     }
 
-    set phaseFiled(nf){
+    set phaseField(nf){
         this._phaseField = nf ;
         this.light.uniforms.phaseTxt.value = nf ;
         this.pass2.uniforms.phaseTxt.value = nf ;
@@ -7431,7 +7444,7 @@ class VolumeRayCaster{
     }
     set width(nw){
         this._width = nw ;
-        this.flm.width = nw ;
+        this.flmt.width = nw ;
         this.crdtTxt.width = nw ;
         this.lightTxt.width = nw ;
         this.filament.uniforms.domainResolution.value 
@@ -7439,7 +7452,7 @@ class VolumeRayCaster{
     }
     set height(nh){
         this._height = nh ;
-        this.flm.height = nh ;
+        this.flmt.height = nh ;
         this.crdtTxt.height = nh ;
         this.lightTxt.height = nh ;
         this.filament.uniforms.domainResolution.value 
