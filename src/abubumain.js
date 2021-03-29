@@ -1,5 +1,5 @@
-var version = 'v6.5.02' ;
-var updateTime = 'Tue 09 Mar 2021 21:04:45 (EST)';
+var version = 'v6.5.03' ;
+var updateTime = 'Mon 29 Mar 2021 12:36:03 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -6774,20 +6774,18 @@ class VolumeRayCaster{
                                    when no light is provided        */
         this.ptls.push(0,0,0) ;
 
-        this.phaseField     = readOption(opts.phaseField , null         ) ;
-        this.compMap        = readOption(opts.compressionMap, null      ) ;
+        this._phaseField     = readOption(opts.phaseField , null         ) ;
+        this._compMap        = readOption(opts.compressionMap, null      ) ;
 
-        if (this.compMap != null ){
+        if (this._compMap != null ){
             this.useCompMap = true ;
-            this.width  = this.compMap.width ;
-            this.height = this.compMap.height ;
+            this._width  = this.compMap.width ;
+            this._height = this.compMap.height ;
         }else{
             this.useCompMap = false ;
-            this.width  = this.target.width ;
-            this.height = this.target.height ;
+            this._width  = this.target.width ;
+            this._height = this.target.height ;
         }
-        this.domainResolution = 
-            [ this.width/this.mx, this.height/this.my,this.mx*this.my ] ;
 
         function ifNullThenUnit(trgt){
             if (trgt == null ){
@@ -6804,8 +6802,8 @@ class VolumeRayCaster{
 
         this.usePhaseField = 
             readOption( opts.usePhaseField, this.usePhaseField ) ;
-        this.phaseField = ifNullThenUnit(this.phaseField) ;
-        this.compMap    = ifNullThenUnit(this.compMap   ) ;
+        this._phaseField = ifNullThenUnit(this.phaseField) ;
+        this._compMap    = ifNullThenUnit(this.compMap   ) ;
         this.prevTarget = ifNullThenUnit(this.prevTarget) ;
 
         this.flmt = new Float32Texture(this.width, this.height ) ;
@@ -7388,9 +7386,6 @@ class VolumeRayCaster{
         this.fcanvas.height= this.canvas.height ;
         this.fcontext = this.fcanvas.getContext('2d') ;
 
-
-
-
         this.messages = [] ;
 
     } 
@@ -7398,6 +7393,58 @@ class VolumeRayCaster{
  *  CONSTRUCTOR ENDS
  *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
+
+    get phaseField(){
+        return this._phaseField ;
+    }
+
+    get compMap(){
+        return this._compMap ;
+    }
+
+    set phaseFiled(nf){
+        this._phaseField = nf ;
+        this.light.uniforms.phaseTxt.value = nf ;
+        this.pass2.uniforms.phaseTxt.value = nf ;
+        this.projectCrds.uniforms.phaseTxt.value = nf ;
+        return nf ;
+    }
+
+    set compMap(nm){
+        this._compMap = nm ;
+        this.pass2.uniforms.compMap.value = nm ;
+        this.clickVoxelCoordinator.uniforms.compMap.value =nm ;
+        this.width = nm.width ;
+        this.height= nm.height ;
+    }
+        
+    get width(){
+        return this._width ;
+    }
+    get height(){
+        return this._height ;
+    }
+    
+    get domainResolution(){
+        return [ this.width/this.mx, 
+               this.height/this.my,this.mx*this.my ] ;
+    }
+    set width(nw){
+        this._width = nw ;
+        this.flm.width = nw ;
+        this.crdtTxt.width = nw ;
+        this.lightTxt.width = nw ;
+        this.filament.uniforms.domainResolution.value 
+            = this.domainResolution ;
+    }
+    set height(nh){
+        this._height = nh ;
+        this.flm.height = nh ;
+        this.crdtTxt.height = nh ;
+        this.lightTxt.height = nh ;
+        this.filament.uniforms.domainResolution.value 
+            = this.domainResolution ;
+    }
 
     // get and set modelMatrix ...........................................
     get modelMatrix(){
