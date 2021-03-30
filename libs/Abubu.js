@@ -12639,7 +12639,7 @@ function getColormaps(){
 };
 
 
-var version = 'v6.5.03' ;
+var version = 'v6.6.00' ;
 var updateTime = 'Mon 29 Mar 2021 17:59:35 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -14996,82 +14996,82 @@ class Solver{
  * geometry
  *------------------------------------------------------------------------
  */
-        this.geometry = {} ;
-        this.geometry.vertices =  [
-            1.,1.,0.,
-            0.,1.,0.,
-            1.,0.,0.,
-            0.,0.,0.,
-        ] ;
-        this.geometry.noVertices= 4 ;
-        this.geometry.noCoords  = 3 ;
-        this.geometry.type      = gl.FLOAT ;
-        this.geometry.normalize = false ;
-        this.geometry.stride    = 0 ;
-        this.geometry.offset    = 0 ;
-        this.geometry.premitive = gl.TRIANGLE_STRIP ;
-        this.geometry.width = 1 ;
+        if (options?.geometry){
+            let og = options.geometry ;
+            let geometry = {} ;
+            
+            geometry.vertices   = og.vertices ?? null ;
+            
+            geometry.noCoords   = og.noCoords ?? 3 ;
 
-        if ( options.geometry != undefined ){
-            this.geometry.vertices =
-                readOption( options.geometry.vertices, null ) ;
-            if (this.geometry.vertices == null ){
-                warn(       'Error: The passed geometry has no vertices! '
-                        +   'No solver can be defined!'                 ) ;
-                delete this ;
-                return null ;
-            }
-            this.geometry.noCoords = readOptions(
-                options.geometry.noCoords ,  3
-            ) ;
+            geometry.noVertices = og.noVertices ?? 
+                ( (geometry.vertices?.length / geometry.noCoords) ?? 0) ;
+            
+            geometry.normalize  = og.normalize ?? false ;
+            
+            geometry.premitive  = gl[ og.premitive?.toUpperCase() ] ??
+                gl.TRIANGLE_STRIP ;
+            
+            geometry.stride = og.stride ?? 0 ;
+            
+            geometry.offset = og.offset ?? 0 ;
+            
+            geometry.type   = gl[ og.type?.toUpperCase() ] ?? gl.FLOAT ;
+            
+            geometry.width  = og.width ?? 1 ;
 
-            this.geometry.noVertices = readOptions(
-                options.geometry.noVertices ,
-                this.geometry.vertices.length
-                        /this.geometry.noCoords
-            ) ;
-            this.geometry.normalize = readOption(
-                options.geometry.normalize ,
-                false
-            ) ;
-            this.geometry.premitive = readGlOption(
-                options.geometry.premitive ,
-                gl.TRIANGLE_STRIP
-            ) ;
-            this.geometry.width = readOption(
-                options.geometry.width,
-                1
-            ) ;
+            this.geometry = geometry ; 
+        }else{
+            this.geometry = {} ;
+            this.geometry.vertices =  [
+                1.,1.,0.,
+                0.,1.,0.,
+                1.,0.,0.,
+                0.,0.,0.,
+            ] ;
+            this.geometry.noVertices= 4 ;
+            this.geometry.noCoords  = 3 ;
+            this.geometry.type      = gl.FLOAT ;
+            this.geometry.normalize = false ;
+            this.geometry.stride    = 0 ;
+            this.geometry.offset    = 0 ;
+            this.geometry.premitive = gl.TRIANGLE_STRIP ;
+            this.geometry.width = 1 ;
         }
 
 /*------------------------------------------------------------------------
  * Creating the position vector
  *------------------------------------------------------------------------
  */
-        this.positionLoc = gl.getAttribLocation(this.prog, "position") ;
-        this.positionBuffer = gl.createBuffer() ;
-        gl.bindBuffer(
-            gl.ARRAY_BUFFER,
-            this.positionBuffer
-        ) ;
-        gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array(this.geometry.vertices),
-            gl.STATIC_DRAW
-        );
         this.vao = gl.createVertexArray() ;
         gl.bindVertexArray(this.vao) ;
-        gl.enableVertexAttribArray(this.positionLoc) ;
+        
+        if( this.geometry.vertices ){
+            this.positionLoc 
+                = gl.getAttribLocation(this.prog, "position") ;
 
-        gl.vertexAttribPointer(
-            this.positionLoc ,
-            this.geometry.noCoords ,
-            this.geometry.type ,
-            this.geometry.normalize ,
-            this.geometry.stride ,
-            this.geometry.offset
-        ) ;
+            this.positionBuffer = gl.createBuffer() ;
+            gl.bindBuffer(
+                gl.ARRAY_BUFFER,
+                this.positionBuffer
+            ) ;
+            gl.bufferData(
+                gl.ARRAY_BUFFER,
+                new Float32Array(this.geometry.vertices),
+                gl.STATIC_DRAW
+            );
 
+            gl.vertexAttribPointer(
+                this.positionLoc ,
+                this.geometry.noCoords ,
+                this.geometry.type ,
+                this.geometry.normalize ,
+                this.geometry.stride ,
+                this.geometry.offset
+            ) ;
+
+            gl.enableVertexAttribArray(this.positionLoc) ;
+        }
         gl.bindBuffer(gl.ARRAY_BUFFER, null) ;
         gl.bindVertexArray(null) ;
 

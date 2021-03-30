@@ -12640,7 +12640,7 @@ function getColormaps(){
 
 
 var version = 'v6.6.00' ;
-var updateTime = 'Thu 18 Mar 2021 13:33:33 (EDT)';
+var updateTime = 'Mon 29 Mar 2021 17:59:35 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -13285,6 +13285,7 @@ class Texture{
         this._magFilter = readOption( options.magFilter , 'nearest' ) ;
         this._data      = readOption(   options.data ,
                                         null                ) ;
+        this.keepData   = options?.keepData ?? false ;
 
 /*------------------------------------------------------------------------
  * bind and set texture
@@ -13497,7 +13498,9 @@ class Texture{
     }
 
     set data(new_data){
-        this._data = new_data ;
+        if ( this.keepData ){
+            this._data = new_data ;
+        }
         this.updateData(new_data) ;
     }
 
@@ -13510,6 +13513,10 @@ class Texture{
                     GL(this.format), GL(this.type) ,
                     this.data    ) ;
         gl.bindTexture(gl.TEXTURE_2D, null) ;
+
+        if (!this.keepData){
+            this._data = null ;
+        }
     }
 
     update( nd ){
@@ -14152,6 +14159,12 @@ class RgbaCompressedData{
             } 
         ) ;
         
+        this.data                       = null ;
+        this.compressedTable            = null ;
+        this.compressedTexelCrdtTable   = null ;
+        this.compressedTexelIndexTable  = null ;
+        this.fullTexelCrdtTable         = null ;
+        this.fullTexelIndexTable        = null ;
     }   
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *  CONSTRUCTOR ENDS
@@ -14983,82 +14996,82 @@ class Solver{
  * geometry
  *------------------------------------------------------------------------
  */
-        this.geometry = {} ;
-        this.geometry.vertices =  [
-            1.,1.,0.,
-            0.,1.,0.,
-            1.,0.,0.,
-            0.,0.,0.,
-        ] ;
-        this.geometry.noVertices= 4 ;
-        this.geometry.noCoords  = 3 ;
-        this.geometry.type      = gl.FLOAT ;
-        this.geometry.normalize = false ;
-        this.geometry.stride    = 0 ;
-        this.geometry.offset    = 0 ;
-        this.geometry.premitive = gl.TRIANGLE_STRIP ;
-        this.geometry.width = 1 ;
+        if (options?.geometry){
+            let og = options.geometry ;
+            let geometry = {} ;
+            
+            geometry.vertices   = og.vertices ?? null ;
+            
+            geometry.noCoords   = og.noCoords ?? 3 ;
 
-        if ( options.geometry != undefined ){
-            this.geometry.vertices =
-                readOption( options.geometry.vertices, null ) ;
-            if (this.geometry.vertices == null ){
-                warn(       'Error: The passed geometry has no vertices! '
-                        +   'No solver can be defined!'                 ) ;
-                delete this ;
-                return null ;
-            }
-            this.geometry.noCoords = readOptions(
-                options.geometry.noCoords ,  3
-            ) ;
+            geometry.noVertices = og.noVertices ?? 
+                ( (geometry.vertices?.length / geometry.noCoords) ?? 0) ;
+            
+            geometry.normalize  = og.normalize ?? false ;
+            
+            geometry.premitive  = gl[ og.premitive?.toUpperCase() ] ??
+                gl.TRIANGLE_STRIP ;
+            
+            geometry.stride = og.stride ?? 0 ;
+            
+            geometry.offset = og.offset ?? 0 ;
+            
+            geometry.type   = gl[ og.type?.toUpperCase() ] ?? gl.FLOAT ;
+            
+            geometry.width  = og.width ?? 1 ;
 
-            this.geometry.noVertices = readOptions(
-                options.geometry.noVertices ,
-                this.geometry.vertices.length
-                        /this.geometry.noCoords
-            ) ;
-            this.geometry.normalize = readOption(
-                options.geometry.normalize ,
-                false
-            ) ;
-            this.geometry.premitive = readGlOption(
-                options.geometry.premitive ,
-                gl.TRIANGLE_STRIP
-            ) ;
-            this.geometry.width = readOption(
-                options.geometry.width,
-                1
-            ) ;
+            this.geometry = geometry ; 
+        }else{
+            this.geometry = {} ;
+            this.geometry.vertices =  [
+                1.,1.,0.,
+                0.,1.,0.,
+                1.,0.,0.,
+                0.,0.,0.,
+            ] ;
+            this.geometry.noVertices= 4 ;
+            this.geometry.noCoords  = 3 ;
+            this.geometry.type      = gl.FLOAT ;
+            this.geometry.normalize = false ;
+            this.geometry.stride    = 0 ;
+            this.geometry.offset    = 0 ;
+            this.geometry.premitive = gl.TRIANGLE_STRIP ;
+            this.geometry.width = 1 ;
         }
 
 /*------------------------------------------------------------------------
  * Creating the position vector
  *------------------------------------------------------------------------
  */
-        this.positionLoc = gl.getAttribLocation(this.prog, "position") ;
-        this.positionBuffer = gl.createBuffer() ;
-        gl.bindBuffer(
-            gl.ARRAY_BUFFER,
-            this.positionBuffer
-        ) ;
-        gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array(this.geometry.vertices),
-            gl.STATIC_DRAW
-        );
         this.vao = gl.createVertexArray() ;
         gl.bindVertexArray(this.vao) ;
-        gl.enableVertexAttribArray(this.positionLoc) ;
+        
+        if( this.geometry.vertices ){
+            this.positionLoc 
+                = gl.getAttribLocation(this.prog, "position") ;
 
-        gl.vertexAttribPointer(
-            this.positionLoc ,
-            this.geometry.noCoords ,
-            this.geometry.type ,
-            this.geometry.normalize ,
-            this.geometry.stride ,
-            this.geometry.offset
-        ) ;
+            this.positionBuffer = gl.createBuffer() ;
+            gl.bindBuffer(
+                gl.ARRAY_BUFFER,
+                this.positionBuffer
+            ) ;
+            gl.bufferData(
+                gl.ARRAY_BUFFER,
+                new Float32Array(this.geometry.vertices),
+                gl.STATIC_DRAW
+            );
 
+            gl.vertexAttribPointer(
+                this.positionLoc ,
+                this.geometry.noCoords ,
+                this.geometry.type ,
+                this.geometry.normalize ,
+                this.geometry.stride ,
+                this.geometry.offset
+            ) ;
+
+            gl.enableVertexAttribArray(this.positionLoc) ;
+        }
         gl.bindBuffer(gl.ARRAY_BUFFER, null) ;
         gl.bindVertexArray(null) ;
 
@@ -19415,20 +19428,18 @@ class VolumeRayCaster{
                                    when no light is provided        */
         this.ptls.push(0,0,0) ;
 
-        this.phaseField     = readOption(opts.phaseField , null         ) ;
-        this.compMap        = readOption(opts.compressionMap, null      ) ;
+        this._phaseField     = readOption(opts.phaseField , null         ) ;
+        this._compMap        = readOption(opts.compressionMap, null      ) ;
 
-        if (this.compMap != null ){
+        if (this._compMap != null ){
             this.useCompMap = true ;
-            this.width  = this.compMap.width ;
-            this.height = this.compMap.height ;
+            this._width  = this.compMap.width ;
+            this._height = this.compMap.height ;
         }else{
             this.useCompMap = false ;
-            this.width  = this.target.width ;
-            this.height = this.target.height ;
+            this._width  = this.target.width ;
+            this._height = this.target.height ;
         }
-        this.domainResolution = 
-            [ this.width/this.mx, this.height/this.my,this.mx*this.my ] ;
 
         function ifNullThenUnit(trgt){
             if (trgt == null ){
@@ -19445,8 +19456,8 @@ class VolumeRayCaster{
 
         this.usePhaseField = 
             readOption( opts.usePhaseField, this.usePhaseField ) ;
-        this.phaseField = ifNullThenUnit(this.phaseField) ;
-        this.compMap    = ifNullThenUnit(this.compMap   ) ;
+        this._phaseField = ifNullThenUnit(this.phaseField) ;
+        this._compMap    = ifNullThenUnit(this.compMap   ) ;
         this.prevTarget = ifNullThenUnit(this.prevTarget) ;
 
         this.flmt = new Float32Texture(this.width, this.height ) ;
@@ -20029,9 +20040,6 @@ class VolumeRayCaster{
         this.fcanvas.height= this.canvas.height ;
         this.fcontext = this.fcanvas.getContext('2d') ;
 
-
-
-
         this.messages = [] ;
 
     } 
@@ -20039,6 +20047,58 @@ class VolumeRayCaster{
  *  CONSTRUCTOR ENDS
  *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
+
+    get phaseField(){
+        return this._phaseField ;
+    }
+
+    get compMap(){
+        return this._compMap ;
+    }
+
+    set phaseField(nf){
+        this._phaseField = nf ;
+        this.light.uniforms.phaseTxt.value = nf ;
+        this.pass2.uniforms.phaseTxt.value = nf ;
+        this.projectCrds.uniforms.phaseTxt.value = nf ;
+        return nf ;
+    }
+
+    set compMap(nm){
+        this._compMap = nm ;
+        this.pass2.uniforms.compMap.value = nm ;
+        this.clickVoxelCoordinator.uniforms.compMap.value =nm ;
+        this.width = nm.width ;
+        this.height= nm.height ;
+    }
+        
+    get width(){
+        return this._width ;
+    }
+    get height(){
+        return this._height ;
+    }
+    
+    get domainResolution(){
+        return [ this.width/this.mx, 
+               this.height/this.my,this.mx*this.my ] ;
+    }
+    set width(nw){
+        this._width = nw ;
+        this.flmt.width = nw ;
+        this.crdtTxt.width = nw ;
+        this.lightTxt.width = nw ;
+        this.filament.uniforms.domainResolution.value 
+            = this.domainResolution ;
+    }
+    set height(nh){
+        this._height = nh ;
+        this.flmt.height = nh ;
+        this.crdtTxt.height = nh ;
+        this.lightTxt.height = nh ;
+        this.filament.uniforms.domainResolution.value 
+            = this.domainResolution ;
+    }
 
     // get and set modelMatrix ...........................................
     get modelMatrix(){
