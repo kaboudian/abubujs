@@ -1,5 +1,5 @@
-var version = 'v6.6.00' ;
-var updateTime = 'Tue 30 Mar 2021 13:04:11 (EDT)';
+var version = 'v6.7.00' ;
+var updateTime = 'Thu 01 Apr 2021 13:02:23 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -2308,11 +2308,11 @@ class Solver{
         }
 
 /*------------------------------------------------------------------------
- * clear
+ * clearColor
  *------------------------------------------------------------------------
  */
-        this.clear      = readOption(options.clear,         true        ) ;
-        this.clearColor = readOption(options.clearColor,    [0,0,0,0]   ) ;
+        this.clearColor     = readOptions.clearColor ?? true ;
+        this.clearColorValue= readOption(options.clearColorValue,    [0,0,0,0]   ) ;
 
 /*------------------------------------------------------------------------
  * vertexShader
@@ -2335,12 +2335,37 @@ class Solver{
             return ;
         }
 /*------------------------------------------------------------------------
- * depth and cullFacing
+ * cullFacing
  *------------------------------------------------------------------------
  */
         this.cullFacing = readOption( options.cullFacing, false ) ;
         this.cullFace   = readGlOption( options.cullFace, gl.BACK ) ;
-        this.depthTest  = readOption( options.depthTest, false ) ;
+
+/*------------------------------------------------------------------------
+ * depth
+ *------------------------------------------------------------------------
+ */
+        this.depthTest      = readOption( options.depthTest, false ) ;
+        this.clearDepth     = options.clearDepth ?? true ;
+        this.clearDepthValue= options.clearDepthValue ?? 1. ;
+
+/*------------------------------------------------------------------------
+ * stencil
+ *------------------------------------------------------------------------
+ */
+        this.clearStencil = options.clearStencil ?? false ;
+        this.clearStencilValue = options.clearStencilValue ?? 0 ;
+
+/*------------------------------------------------------------------------
+ * blending
+ *------------------------------------------------------------------------
+ */
+        this.blend = options.blend ?? false ;
+        this._blendSrcFactor = "ONE" ;
+        this._blendDstFactor = "ZERO" ;
+       
+        this.blendSrcFactor = options.blendSrcFactor ;
+        this.blendDstFactor = options.blendDstFactor ;
 
 /*------------------------------------------------------------------------
  * Program
@@ -2545,6 +2570,37 @@ class Solver{
         this._program.link() ;
         this.resendUniforms() ;
     }
+
+
+    // blending function geters and setters ..............................
+    get blendSrcFactor(){
+        return this._blendSrcFactor ;
+    }
+    
+    get blendGlSrcFactor(){
+        return gl[this.blendSrcFactor] ;
+    }
+    
+    set blendSrcFactor(nv){
+        if ( gl[nv?.toUpperCase()] ){
+            this._blendSrcFactor = nv.toUpperCase() ;
+        }
+    }
+
+    get blendDstFactor(){
+        return this._blendDstFactor ;
+    }
+
+    get blendGlDstFactor(){
+        return gl[this.blendDstFactor] ;
+    }
+
+    set blendDstFactor(nv){
+        if ( gl[nv?.toUpperCase()] ){
+            this._blendDstFactor = nv.toUpperCase() ;
+        }
+    }
+
 /*------------------------------------------------------------------------
  * setUniform
  *------------------------------------------------------------------------
@@ -2643,7 +2699,6 @@ class Solver{
         this.useProgram() ;
         if ( this.depthTest ){
             gl.enable(gl.DEPTH_TEST);
-            gl.clear(gl.DEPTH_BUFFER_BIT);
         }else{
             gl.disable(gl.DEPTH_TEST) ;
         }
@@ -2654,11 +2709,27 @@ class Solver{
         }else{
             gl.disable(gl.CULL_FACE) ;
         }
+        
+        if ( this.clearDepth ){
+            gl.clearDepth( this.clearDepthValue ) ;
+            gl.clear(gl.DEPTH_BUFFER_BIT) ;
+        }
+        
+        if ( this.clearStencil ){
+            gl.clearStencil( this.clearStencilValue ) ;
+            gl.clear( gl.STENCIL_BUFFER_BIT ) ;
+        }
+
         if ( this.noTextureUniform < 1){
             gl.activeTexture( gl.TEXTURE0 ) ;
             gl.bindTexture( gl.TEXTURE_2D, null ) ;
+        }
+
+        if (this.blend){
+            gl.enable( gl.BLEND ) ;
+            gl.blendFunc( this.blendGlSrcFactor, this.blendGlDstFactor ) ;
         }else{
-           // gl.enable( gl.TEXTURE_2D ) ;
+            gl.disable(gl.BLEND ) ;
         }
 
         /* binding textures and color attachments */
@@ -2694,12 +2765,12 @@ class Solver{
                 gl.viewport(0,0,target.width,target.height) ;
         }
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-        if (this.clear){
+        if (this.clearColor){
             gl.clearColor(
-                this.clearColor[0],
-                this.clearColor[1],
-                this.clearColor[2],
-                this.clearColor[3]
+                this.clearColorValue[0],
+                this.clearColorValue[1],
+                this.clearColorValue[2],
+                this.clearColorValue[3]
             );
             gl.clear(gl.COLOR_BUFFER_BIT);
         }
@@ -2707,12 +2778,12 @@ class Solver{
         if (this.noRenderTargets < 1){
             gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
 
-            if (this.clear){
+            if (this.clearColor){
                 gl.clearColor(
-                    this.clearColor[0],
-                    this.clearColor[1],
-                    this.clearColor[2],
-                    this.clearColor[3]
+                    this.clearColorValue[0],
+                    this.clearColorValue[1],
+                    this.clearColorValue[2],
+                    this.clearColorValue[3]
                 );
                 gl.clear(gl.COLOR_BUFFER_BIT);
             }
@@ -2737,7 +2808,7 @@ class Solver{
                         this.geometry.noVertices    );
 
         if ( this.canvasTarget ){
-            if (this.clear){
+            if (this.clearColor){
                 this.context.clearRect(
                     0,
                     0,
@@ -3062,7 +3133,7 @@ class Signal{
                 renderTargets   : {
                     FragColor   : { location : 0 , target : this.cprv   } ,
                 } ,
-                clear   : true ,
+                clearColor   : true ,
         } ) ;
 
 /*------------------------------------------------------------------------
@@ -3111,8 +3182,8 @@ class Signal{
                     visible :   { type: 'f',  value: this.visible       } ,
                 } ,
                 geometry : this.lineGeom,
-                clear    : false,
-                clearColor : [0.,0.,0.,0.] ,
+                clearColor    : false,
+                clearColorValue : [0.,0.,0.,0.] ,
         } ) ;
 
     } 
@@ -4892,8 +4963,8 @@ class Curve{
                     } ,
                 } ,
                 geometry : this.lineGeom,
-                clear    : false,
-                clearColor : [0.,0.,0.,0.] ,
+                clearColor    : false,
+                clearColorValue : [0.,0.,0.,0.] ,
         } ) ;
 
     }
@@ -5579,7 +5650,7 @@ class Plot2D{
                    renderTargets :{
                        ftipt   : { location : 0 , target : this.ftipt} ,
                    } ,
-                   clear   : true ,
+                   clearColor   : true ,
                } ) ;
         }
 
@@ -6503,7 +6574,7 @@ class Tvsx{
             renderTargets: {
                 outTtex : { location : 0 , target   : this._sttex }
             } ,
-            clear   : false ,
+            clearColor   : false ,
         } ) ;
 
         this.ststps = new Solver({
@@ -6526,7 +6597,7 @@ class Tvsx{
             renderTargets: {
                 outTtex : { location : 0 , target   : this._fttex }
             } ,
-            clear   : false ,
+            clearColor   : false ,
         } ) ;
 
 
@@ -7185,7 +7256,7 @@ class VolumeRayCaster{
             cullFacing      : true ,
             cullFace        : 'back' ,
             depthTest       : true ,
-            clear           : true ,
+            clearColor           : true ,
         } ) ;
 
 /*------------------------------------------------------------------------
@@ -7215,7 +7286,7 @@ class VolumeRayCaster{
             cullFace        : 'back' ,
             depthTest       : true ,
 
-            clear           : true ,
+            clearColor           : true ,
         } ) ;
 
 /*------------------------------------------------------------------------
@@ -7243,7 +7314,7 @@ class VolumeRayCaster{
             renderTargets   : {
                 outTrgt : { location : 0 , target : this.flmt } ,
             } ,
-            clear :false ,
+            clearColor :false ,
         } ) ;
 /*------------------------------------------------------------------------
  * projectedCrds
@@ -7337,7 +7408,7 @@ class VolumeRayCaster{
             cullFacing      : true ,
             cullFace        : 'back' ,
             depthTest       : true ,
-            clear           : true ,
+            clearColor           : true ,
         } ) ;
     
     
@@ -7370,7 +7441,7 @@ class VolumeRayCaster{
                     target      : this.clickCoordinates ,
                 }
             } ,
-            clear : true ,
+            clearColor : true ,
         } ) ;
 
         this.clickVoxelCoordinator = new Solver({
@@ -7387,7 +7458,7 @@ class VolumeRayCaster{
             renderTargets : {
                 voxelPos : { location : 0 , target : this.clickVoxelCrd } ,
             } ,
-            clear : true ,
+            clearColor : true ,
         } ) ;
 
 /*------------------------------------------------------------------------
