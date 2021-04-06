@@ -1,5 +1,5 @@
-var version = 'v6.7.00' ;
-var updateTime = 'Thu 01 Apr 2021 13:02:23 (EDT)';
+var version = 'v6.8.00' ;
+var updateTime = 'Tue 06 Apr 2021 12:59:35 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -2282,6 +2282,219 @@ class Uniform{
 }/* End of class Uniform */
 
 /*========================================================================
+ * DrawTargets: 
+ *      Set of draw targets that can be used for clearing them
+ *========================================================================
+ */
+class DrawTargets{
+    constructor( textures, opts ){
+        this.framebuffer    = gl.createFramebuffer() ;
+        this._textures      = null ;
+        this._attachments   = [] ;
+        this.textures       = textures ;
+    }
+
+    get textures(){
+        return this._textures ;
+    }
+
+    get attachments(){
+        return this._attachments ;
+    }
+
+    set textures(nt){
+        this._textures     =  nt ;
+        this._attachments  = [] ;
+        this.bindMe() ;
+        for(let i in this.textures){
+            gl.framebufferTexture2D( gl.DRAW_FRAMEBUFFER , 
+                    gl["COLOR_ATTACHMENT" + i] ,
+                    gl.TEXTURE_2D, this.textures[i].texture ,
+                    0 ) ;
+            this.attachments.push( gl["COLOR_ATTACHMENT" + i] ) ;
+        }
+        this.unbindMe();
+    }
+    
+    bindMe(){
+        gl.bindFramebuffer( gl.DRAW_FRAMEBUFFER, this.framebuffer ) ;
+    }
+    
+    unbindMe(){
+        gl.bindFramebuffer( gl.DRAW_FRAMEBUFFER, null ) ;
+    }
+
+    stageMe(){
+        this.bindMe() ;
+        gl.drawBuffers(this.attachments) ;
+    }
+    
+    clear( value ){
+        this.stageMe() ;
+        gl.clearColor(...arguments) ;
+        gl.clear(gl.COLOR_BUFFER_BIT) ;
+    }
+} /* End of DrawBuffer */
+/*========================================================================
+ * BlendEquation
+ *========================================================================
+ */
+class BlendEquation{
+    constructor(equation){
+        this._equation = 'FUNC_ADD' ;
+        this.equation = equation ;
+    }
+    get equation(){
+        return this._equation ;
+    }
+    set equation(ne){
+        if ( gl[ne?.toUpperCase] )
+            this._equation = ne.toUpperCase ;
+    }
+    enforce(){
+        gl.blendEquation( gl[this._equation] ) ;
+    }
+} /* end of BlendEquation */
+
+/*========================================================================
+ * BlendEquationSeparate
+ *========================================================================
+ */
+class BlendEquationSeparate{
+    constructor(modeRGB,modeAlpha){
+        this._modeRGB   = 'FUNC_ADD' ;
+        this._modeAlpha = 'FUNC_ADD' ;
+
+    }
+    get modeRGB(){
+        return this._modeRGB ;
+    }
+
+    get modelAlpha(){
+        return this._modeAlpha ;
+    }
+
+    set modeRGB(n){
+        if ( gl[n?.toUpperCase] )
+            this._modeRGB = n.toUpperCase ;
+    }
+    set modelAlpha(n){
+        if ( gl[n?.toUpperCase] )
+            this._modeAlpha = n.toUpperCase ;
+    }
+
+    enforce(){
+        gl.blendEquationSeparate( gl[this.modeRGB], gl[this.modeAlpha] ) ;
+    }
+} /* end of BlendEquationSeparate */
+
+/*========================================================================
+ * BlendFunc
+ *========================================================================
+ */
+class BlendFunction{
+    constructor( srcFactor, dstFactor ){
+        this._srcFactor = 'ONE' ;
+        this._dstFactor = 'ZERO' ;
+
+        this.srcFactor = srcFactor ;
+        this.dstFactor = dstFactor ;
+    }
+    
+    get srcFactor(){
+        return this._srcFactor ;
+    }
+
+    get dstFactor(){
+        return this._dstFacror ;
+    }
+    
+    set srcFactor(nf){
+        if( gl[nf?.toUpperCase()] ){
+            this._srcFactor = nf.toUpperCase() ;
+        }
+    }
+
+    set dstFactor(nf){
+        if ( gl[nf?.toUpperCase()] ){
+            this._dstFacror = nf.toUpperCase() ;
+        }
+    }
+    enforce(){
+        gl.blendFunc( gl[this.srcFactor], gl[this.dstFactor] ) ;
+    }
+}/* end of BlendFunction */
+
+/*========================================================================
+ * BlendFunc
+ *========================================================================
+ */
+class BlendFunctionSeparate{
+    constructor( srcRGB, dstRGB, srcAlpha, dstAlpha){
+        this._srcRGB    = 'ONE' ;
+        this._dstFGB    = 'ZERO' ;
+
+        this._srcAlpha  = 'ONE';
+        this._dstAlpha  = 'ZERO' ;
+
+        this.srcRGB = srcRGB ;
+        this.dstRGB = dstRGB ;
+        this.srcAlpha = srcAlpha ;
+        this.dstAlpha = dstAlpha ;
+    }
+    
+    get srcRGB(){
+        return this._srcRGB ;
+    }
+
+    get dstRGB(){
+        return this._dstRGB ;
+    }
+
+    get srcAlpha(){
+        return this._srcAlpha ;
+    }
+
+    get dstAlpha(){
+        return this._dstAlpha ;
+    }
+
+
+    get dstFactor(){
+        return this._dstFacror ;
+    }
+    
+    set srcRGB(nf){
+        if( gl[nf?.toUpperCase()] ){
+            this._srcRGB = nf.toUpperCase() ;
+        }
+    }
+
+    set dstRGB(nf){
+        if ( gl[nf?.toUpperCase()] ){
+            this._dstRGB = nf.toUpperCase() ;
+        }
+    }
+
+    set srcAlpha(nf){
+        if ( gl[nf?.toUpperCase()] ){
+            this._srcAlpha = nf.toUpperCase() ;
+        }
+    }
+    set dstAlpha(nf){
+        if ( gl[nf?.toUpperCase()] ){
+            this._dstAlpha = nf.toUpperCase() ;
+        }
+    }
+
+    enforce(){
+        gl.blendFunc(   gl[this.srcRGB], gl[this.dstRGB] ,
+                        gl[this.srcAlpha], gl[this.dstAlpha]) ;
+    }
+}/* end of BlendFunction */
+
+
+/*========================================================================
  * Solver
  *========================================================================
  */
@@ -2361,11 +2574,8 @@ class Solver{
  *------------------------------------------------------------------------
  */
         this.blend = options.blend ?? false ;
-        this._blendSrcFactor = "ONE" ;
-        this._blendDstFactor = "ZERO" ;
-       
-        this.blendSrcFactor = options.blendSrcFactor ;
-        this.blendDstFactor = options.blendDstFactor ;
+        this.blendEquation = options.blendEquation ?? null ;
+        this.blendFunction = options.blendFunction ?? null ;
 
 /*------------------------------------------------------------------------
  * Program
@@ -2572,35 +2782,6 @@ class Solver{
     }
 
 
-    // blending function geters and setters ..............................
-    get blendSrcFactor(){
-        return this._blendSrcFactor ;
-    }
-    
-    get blendGlSrcFactor(){
-        return gl[this.blendSrcFactor] ;
-    }
-    
-    set blendSrcFactor(nv){
-        if ( gl[nv?.toUpperCase()] ){
-            this._blendSrcFactor = nv.toUpperCase() ;
-        }
-    }
-
-    get blendDstFactor(){
-        return this._blendDstFactor ;
-    }
-
-    get blendGlDstFactor(){
-        return gl[this.blendDstFactor] ;
-    }
-
-    set blendDstFactor(nv){
-        if ( gl[nv?.toUpperCase()] ){
-            this._blendDstFactor = nv.toUpperCase() ;
-        }
-    }
-
 /*------------------------------------------------------------------------
  * setUniform
  *------------------------------------------------------------------------
@@ -2727,7 +2908,12 @@ class Solver{
 
         if (this.blend){
             gl.enable( gl.BLEND ) ;
-            gl.blendFunc( this.blendGlSrcFactor, this.blendGlDstFactor ) ;
+            if (this.blendEquation){
+                this.blendEquation.enforce() ;
+            }
+            if (this.blendFunction){
+                this.blendFunction.enforce() ;
+            }
         }else{
             gl.disable(gl.BLEND ) ;
         }
@@ -2789,16 +2975,17 @@ class Solver{
             }
         }else{
             gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.framebuffer ) ;
-            for ( var tName in this.renderTargets ){
-                var rTarget = this.renderTargets[tName] ;
-                var loc = rTarget.location ;
-                var tgt = rTarget.target ;
-                gl.framebufferTexture2D(
-                        gl.DRAW_FRAMEBUFFER,
-                        gl.COLOR_ATTACHMENT0+loc,
-                        gl.TEXTURE_2D,
-                        tgt.texture, 0              ) ;
-            }
+            // FIXME Lets see if works commented out
+            //for ( var tName in this.renderTargets ){
+            //    var rTarget = this.renderTargets[tName] ;
+            //    var loc = rTarget.location ;
+            //    var tgt = rTarget.target ;
+            //    gl.framebufferTexture2D(
+            //            gl.DRAW_FRAMEBUFFER,
+            //            gl.COLOR_ATTACHMENT0+loc,
+            //            gl.TEXTURE_2D,
+            //            tgt.texture, 0              ) ;
+            //}
             gl.drawBuffers(this.drawBuffers) ;
         }
         gl.bindVertexArray(this.vao) ;
@@ -10497,6 +10684,11 @@ this.RgbaCompressedDataFromImage     = RgbaCompressedDataFromImage ;
 this.SparseDataFromImage             = RgbaCompressedDataFromImage ;
 this.RgbaCompressedDataFromTexture   = RgbaCompressedDataFromTexture ;
 
+this.DrawTargets         = DrawTargets ;
+this.BlendEquation       = BlendEquation ;
+this.BlendEquationSeparate = BlendEquationSeparate ;
+this.BlendFunction       = BlendFunction ;
+this.BlendFunctionSeparate = BlendFunctionSeparate ;
 
 this.Solver              = Solver ;
 this.Copy                = Copy ;
