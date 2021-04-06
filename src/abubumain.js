@@ -1,5 +1,5 @@
-var version = 'v6.8.00' ;
-var updateTime = 'Tue 06 Apr 2021 12:59:35 (EDT)';
+var version = 'v6.8.01' ;
+var updateTime = 'Tue 06 Apr 2021 17:38:37 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -2493,6 +2493,107 @@ class BlendFunctionSeparate{
     }
 }/* end of BlendFunction */
 
+/*========================================================================
+ * DrawArrays
+ *========================================================================
+ */
+class DrawArrays{
+    constructor( mode, first, count ){
+        this.mode     = mode ?? 'TRIANGLE_STRIP' ;
+        this.first    = first ?? 0 ;
+        this.count    = count ?? 1 ;
+    }
+    get mode(){
+        return this._mode ;
+    }
+    set mode(np){
+        if (gl[np?.toUpperCase()]){
+            this._mode = np.toUpperCase() ;
+        }
+    }
+
+    render(){
+        gl.drawArrays( 
+                gl[this._mode] , 
+                this.first , 
+                this.count ) ;
+    }
+} /* DrawArrays */
+
+/*========================================================================
+ * DrawArraysInstanced
+ *========================================================================
+ */
+class DrawArraysInstanced extends DrawArrays{
+    constructor( mode, first, count, instanceCount ){
+        super( mode, first, count ) ;
+        this.instanceCount = instanceCount ?? 1 ;
+    }
+
+    render(){
+        gl.drawArraysInstanced( 
+                gl[this._mode] , 
+                this.first , 
+                this.count,
+                this.instanceCount ) ;
+    }
+} /* DrawArraysInstanced */
+
+/*========================================================================
+ * DrawElements 
+ *========================================================================
+ */
+class DrawElements{
+    constructor(mode, count, type, offset){
+        this.mode = mode ;
+        this.count = count ;
+        this.type = type ?? 'UNSIGNED_SHORT' ;
+        this.offset = offset ?? 0 ;
+    }
+    get mode(){
+        return this._mode ;
+    }
+    set mode(np){
+        if (gl[np?.toUpperCase()]){
+            this._mode = np.toUpperCase() ;
+        }
+    }
+    get type(){
+        return this._type;
+    }
+
+    set type(np){
+        if (gl[np?.toUpperCase()]){
+            this._type = np.toUpperCase() ;
+        }
+    }
+    render(){
+        gl.drawElements(
+                gl[this._mode], 
+                this.count, 
+                gl[this._type], 
+                this.offset ) ;
+    }
+} /* DrawElements */
+
+/*========================================================================
+ * DrawElementsInstanced
+ *========================================================================
+ */
+class DrawElementsInstanced extends DrawElements{
+    constructor(mode, count, type, offset, instanceCount){
+        super(mode, count, type, offset ) ;
+        this.instanceCount = instanceCount ?? 1 ;
+    }
+    render(){
+        gl.drawElementsInstanced(
+                gl[this._mode], 
+                this.count, 
+                gl[this._type], 
+                this.offset ,
+                this.instanceCount) ;
+    }
+} /* DrawElementsInstanced */
 
 /*========================================================================
  * Solver
@@ -2603,8 +2704,9 @@ class Solver{
             
             geometry.normalize  = og.normalize ?? false ;
             
-            geometry.premitive  = gl[ og.premitive?.toUpperCase() ] ??
-                gl.TRIANGLE_STRIP ;
+            geometry.premitive  = og.premitive ?? 'TRIANGLE_STRIP'; 
+            //gl[ og.premitive?.toUpperCase() ] ??
+            //    gl.TRIANGLE_STRIP ;
             
             geometry.stride = og.stride ?? 0 ;
             
@@ -2629,9 +2731,17 @@ class Solver{
             this.geometry.normalize = false ;
             this.geometry.stride    = 0 ;
             this.geometry.offset    = 0 ;
-            this.geometry.premitive = gl.TRIANGLE_STRIP ;
+            this.geometry.premitive = 'TRIANGLE_STRIP' ;
             this.geometry.width = 1 ;
         }
+/*------------------------------------------------------------------------
+ * draw
+ *------------------------------------------------------------------------
+ */
+        this.draw = options?.draw ?? new DrawArrays(
+                this.geometry.premitive, 
+                this.geometry.offset, 
+                this.geometry.noVertices ) ;
 
 /*------------------------------------------------------------------------
  * Creating the position vector
@@ -2974,24 +3084,15 @@ class Solver{
             }
         }else{
             gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.framebuffer ) ;
-            // FIXME Lets see if works commented out
-            //for ( var tName in this.renderTargets ){
-            //    var rTarget = this.renderTargets[tName] ;
-            //    var loc = rTarget.location ;
-            //    var tgt = rTarget.target ;
-            //    gl.framebufferTexture2D(
-            //            gl.DRAW_FRAMEBUFFER,
-            //            gl.COLOR_ATTACHMENT0+loc,
-            //            gl.TEXTURE_2D,
-            //            tgt.texture, 0              ) ;
-            //}
             gl.drawBuffers(this.drawBuffers) ;
         }
         gl.bindVertexArray(this.vao) ;
-        gl.lineWidth(this.geometry.width) ;
-        gl.drawArrays(  this.geometry.premitive ,
-                        this.geometry.offset ,
-                        this.geometry.noVertices    );
+        gl.lineWidth(   this.geometry.width) ;
+
+        this.draw.render() ;
+        //gl.drawArrays(  this.geometry.premitive ,
+        //                this.geometry.offset ,
+        //                this.geometry.noVertices    );
 
         if ( this.canvasTarget ){
             if (this.clearColor){
@@ -10683,11 +10784,16 @@ this.RgbaCompressedDataFromImage     = RgbaCompressedDataFromImage ;
 this.SparseDataFromImage             = RgbaCompressedDataFromImage ;
 this.RgbaCompressedDataFromTexture   = RgbaCompressedDataFromTexture ;
 
-this.DrawTargets         = DrawTargets ;
-this.BlendEquation       = BlendEquation ;
-this.BlendEquationSeparate = BlendEquationSeparate ;
-this.BlendFunction       = BlendFunction ;
-this.BlendFunctionSeparate = BlendFunctionSeparate ;
+this.DrawTargets            = DrawTargets ;
+this.BlendEquation          = BlendEquation ;
+this.BlendEquationSeparate  = BlendEquationSeparate ;
+this.BlendFunction          = BlendFunction ;
+this.BlendFunctionSeparate  = BlendFunctionSeparate ;
+
+this.DrawArrays             = DrawArrays ;
+this.DrawArraysInstanced    = DrawArraysInstanced ;
+this.DrawElements           = DrawElements ;
+this.DrawElementsInstanced  = DrawElementsInstanced ;
 
 this.Solver              = Solver ;
 this.Copy                = Copy ;
