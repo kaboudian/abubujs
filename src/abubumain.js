@@ -2574,16 +2574,8 @@ class Solver{
  *------------------------------------------------------------------------
  */
         this.blend = options.blend ?? false ;
-<<<<<<< HEAD
-        this._blendSrcFactor = "ONE" ;
-        this._blendDstFactor = "ZERO" ;
-       
-        this.blendSrcFactor = options.blendSrcFactor ;
-        this.blendDstFactor = options.blendDstFactor ;
-=======
         this.blendEquation = options.blendEquation ?? null ;
         this.blendFunction = options.blendFunction ?? null ;
->>>>>>> devel
 
 /*------------------------------------------------------------------------
  * Program
@@ -2789,39 +2781,6 @@ class Solver{
         this.resendUniforms() ;
     }
 
-
-<<<<<<< HEAD
-    // blending function geters and setters ..............................
-    get blendSrcFactor(){
-        return this._blendSrcFactor ;
-    }
-    
-    get blendGlSrcFactor(){
-        return gl[this.blendSrcFactor] ;
-    }
-    
-    set blendSrcFactor(nv){
-        if ( gl[nv?.toUpperCase()] ){
-            this._blendSrcFactor = nv.toUpperCase() ;
-        }
-    }
-
-    get blendDstFactor(){
-        return this._blendDstFactor ;
-    }
-
-    get blendGlDstFactor(){
-        return gl[this.blendDstFactor] ;
-    }
-
-    set blendDstFactor(nv){
-        if ( gl[nv?.toUpperCase()] ){
-            this._blendDstFactor = nv.toUpperCase() ;
-        }
-    }
-
-=======
->>>>>>> devel
 /*------------------------------------------------------------------------
  * setUniform
  *------------------------------------------------------------------------
@@ -2948,16 +2907,12 @@ class Solver{
 
         if (this.blend){
             gl.enable( gl.BLEND ) ;
-<<<<<<< HEAD
-            gl.blendFunc( this.blendGlSrcFactor, this.blendGlDstFactor ) ;
-=======
             if (this.blendEquation){
                 this.blendEquation.enforce() ;
             }
             if (this.blendFunction){
                 this.blendFunction.enforce() ;
             }
->>>>>>> devel
         }else{
             gl.disable(gl.BLEND ) ;
         }
