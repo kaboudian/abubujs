@@ -14990,7 +14990,7 @@ class BlendEquation{
     }
     set equation(ne){
         if ( gl[ne?.toUpperCase] )
-            this._equation = ne.toUpperCase ;
+            this._equation = ne.toUpperCase() ;
     }
     enforce(){
         gl.blendEquation( gl[this._equation] ) ;

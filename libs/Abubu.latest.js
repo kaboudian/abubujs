@@ -12639,8 +12639,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.01' ;
-var updateTime = 'Tue 06 Apr 2021 17:38:37 (EDT)';
+var version = 'v6.8.02' ;
+var updateTime = 'Tue 06 Apr 2021 20:18:38 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -14989,8 +14989,8 @@ class BlendEquation{
         return this._equation ;
     }
     set equation(ne){
-        if ( gl[ne?.toUpperCase] )
-            this._equation = ne.toUpperCase ;
+        if ( gl[ne?.toUpperCase()] )
+            this._equation = ne.toUpperCase() ;
     }
     enforce(){
         gl.blendEquation( gl[this._equation] ) ;
@@ -15016,12 +15016,12 @@ class BlendEquationSeparate{
     }
 
     set modeRGB(n){
-        if ( gl[n?.toUpperCase] )
-            this._modeRGB = n.toUpperCase ;
+        if ( gl[n?.toUpperCase()] )
+            this._modeRGB = n.toUpperCase() ;
     }
     set modelAlpha(n){
-        if ( gl[n?.toUpperCase] )
-            this._modeAlpha = n.toUpperCase ;
+        if ( gl[n?.toUpperCase()] )
+            this._modeAlpha = n.toUpperCase() ;
     }
 
     enforce(){
@@ -15073,7 +15073,7 @@ class BlendFunction{
 class BlendFunctionSeparate{
     constructor( srcRGB, dstRGB, srcAlpha, dstAlpha){
         this._srcRGB    = 'ONE' ;
-        this._dstFGB    = 'ZERO' ;
+        this._dstRGB    = 'ZERO' ;
 
         this._srcAlpha  = 'ONE';
         this._dstAlpha  = 'ZERO' ;
