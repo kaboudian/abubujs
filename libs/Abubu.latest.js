@@ -12639,8 +12639,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.02' ;
-var updateTime = 'Tue 06 Apr 2021 20:18:38 (EDT)';
+var version = 'v6.8.03' ;
+var updateTime = 'Tue 20 Apr 2021 16:07:17 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -23176,12 +23176,213 @@ class SourceCode{
         return this._solvers ;
     }
 }
+/*========================================================================
+ * Editor
+ *========================================================================
+ */
+class Editor{
+    constructor(o){
+        let src = o?.sources ?? {} ;
+        this._keys      = [] ;
+        this._sources   = [] ;
+        this._titles    = [] ;
+        this._modes     = [] ;
+        this._themes    = [] ;
+        this._options   = [] ;
+        this._no        = 0;
+        this._editorId  = o?.editor ?? null ;
+        this._editorId  = o?.id ?? this.editorId ;
 
+        try{
+            this.editor = ace.edit(this.editorId) ;
+        }catch(e){
+            console.error(e) ;
+            return null ;
+        }
+
+        this.callback  = o?.callback ?? (()=>{}) ;
+        this._on        = o?.on ?? 'change' ;
+        
+        for(let [key, source] of Object.entries(src) ){
+            this._keys.push(key) ;
+            this._sources.push(source) ;
+            this._titles.push( source?.title ?? key ) ;
+            this._themes.push( source?.theme ?? 'ace/theme/tomorrow' ) ;
+            this._modes.push(  source?.mode ?? 'ace/mode/glsl');
+            this._options.push(source?.options ?? {} ) ;
+        }
+
+        let j = 0 ;
+        if(o?.active){
+            for(let i=0 ; i< this.keys.length ; i++){
+                if ( this.keys[i] == o.active ){
+                    j = i ;
+                    break ;
+                }
+            }
+        }
+        this.no = j ;
+
+        this.editor.on( this.on , (e) => this.update(e) ) ;
+
+        // readers and writers ...........................................
+        this.reader = new TextReader() ;
+        this.reader.onload = ()=>{
+            this.source = this.reader.result ;
+            
+            this.editor.on( this.on , ()=>{}) ;
+            this.editor.setValue( this.source) ;
+            this.editor.clearSelection() ;
+            this.editor.on( this.on , (e) => this.update(e) ) ;
+
+        }
+
+        this.writer = new TextWriter() ;
+        this.writer.onclick = ()=>{
+            this.writer.filename = this.filename ;
+            this.writer.text     = this.editor.getValue() ;
+        }
+
+    } /* End of constructor */
+
+    get on(){
+        return this._on ;
+    }
+    set on(nv){
+        this.editor.on(this.on , ()=>{}) ;
+        this._on = nv ;
+        this.editor.on( this.on , (e) => this.update(e) ) ;
+    }
+    get editorId(){
+        return this._editorId ;
+    }
+    get keys(){
+        return this._keys ;
+    }
+    
+    get mode(){
+        return this._modes[this.no] ;
+    }
+
+    set mode(nm){
+        this._modes[this.no] = nm ;
+        this.editor.getSession().setMode(this.mode) ;
+    }
+    get theme(){
+        return this._themes[this.no] ;
+    }
+    set theme(nt){
+        this._themes[this.no] = nt ;
+        this.editor.setTheme(this.theme) ;
+    }
+    get options(){
+        return this._options[this.no] ;
+    }
+    set options(o){
+        this._options[this.no] =  o ;
+        this.editor.setOptions(this.options) ;
+    }
+   
+    get no(){
+        return this._no ;
+    }
+
+    set no(nn){
+        this._no = nn ;
+        this.editor.setValue(this.source) ;
+        this.editor.getSession().setMode(this.mode) ;
+        this.editor.setTheme(this.theme) ;
+        this.editor.setOptions(this.options) ;
+        this.editor.clearSelection() ;
+    }
+
+
+    get src(){
+        return this.sources[this.no] ;
+    }
+
+    get sources(){
+        return this._sources ;
+    }
+
+    get source(){
+        return this.src.source ;
+    }
+
+    get solvers(){
+        return this.src.solvers ;
+    }
+
+    set source(ns){
+        if( ns.length > 15 ){ 
+            this.src.source = ns ;
+            for(let solver of this.solvers){
+                solver.fragmentShader = ns ;
+            }
+        }
+    }
+
+    get titles(){
+        return this._titles ;
+    }
+    get title(){
+        return this.titles[this.no];
+    }
+
+    set title(nt){
+        for(let i=0 ; i < this.titles.length ; i++){
+            if (this.titles[i] == nt){
+                this.no = i ;
+                break ;
+            }
+        }
+    }
+
+    get names(){
+        return this.keys ;
+    }
+    get name(){
+        return this.title ;
+    }
+    set name(nn){
+        this.title = nn ;
+    }
+
+    get editing(){
+        return this.title ;
+    }
+    set editing(ev){
+        this.titl = nv ;
+    }
+
+    get filename(){
+        return this.src.filename ?? 'source.text' ;
+    }
+    set filename(nf){
+        this.src.filename = nf ;
+    }
+
+    update(){
+        this.source = this.editor.getValue() ;
+
+        this.callback() ;
+        (this.src.callback ?? (()=>{}))() ;
+    }
+
+    load(){
+        this.reader.input.click() ;
+    }
+
+    save(){
+        this.writer.save() ;
+    }
+
+}/* End of editor */
 /*========================================================================
  * Editor
  *========================================================================
  */ 
-class Editor{
+class OldEditor{
     constructor(o={}){
         var sources = readOptions(o.sources, {}) ;
         this._sources = [] ;
