@@ -1,5 +1,5 @@
-var version = 'v6.8.03' ;
-var updateTime = 'Tue 20 Apr 2021 16:07:17 (EDT)';
+var version = 'v6.8.04' ;
+var updateTime = 'Wed 21 Apr 2021 14:51:10 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -4458,6 +4458,13 @@ class SignalPlot{
         this.render() ;
     }
 
+    get minValue(){
+        return this.yticks.min ;
+    }
+    set minValue(nv){
+        this.setMinValue(nv) ;
+    }
+
 /*------------------------------------------------------------------------
  * setMaxValue
  *------------------------------------------------------------------------
@@ -4466,6 +4473,14 @@ class SignalPlot{
         this.yticks.max = val ;
         this.initBackground() ;
         this.render() ;
+    }
+
+    get maxValue(){
+        return this.yticks.max ;
+    }
+
+    set maxValue(nv){
+        this.setMaxValue(nv) ;
     }
 
 
@@ -4541,6 +4556,10 @@ class SignalPlot{
         return ;
     }
 
+    set probePosition(nv){
+        this.setProbePosition(nv) ;
+    }
+
 /*------------------------------------------------------------------------
  * getProbePosition
  *
@@ -4549,6 +4568,10 @@ class SignalPlot{
  */
     getProbePosition(){
         return this.signals[0].getProbePosition() ;
+    }
+
+    get probePosition(){
+        return this.getProbePosition() ;
     }
 
 /*------------------------------------------------------------------------
@@ -6282,6 +6305,10 @@ class Plot2D{
     get messages(){
         return this._messages ;
     }
+
+    get colormap(){
+        return this._clrmName ;
+    }
 /*------------------------------------------------------------------------
  * setter functions
  *------------------------------------------------------------------------
@@ -6317,6 +6344,11 @@ class Plot2D{
         }
         this.plot.setUniform('channelMultiplier',
             this.channelMultiplier );
+    }
+    
+    set probeVisible(nv){
+        this._probeVisible = nv ;
+        this.initForeground() ;
     }
 
     set probePosition(pos){
