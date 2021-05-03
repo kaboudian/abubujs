@@ -12639,8 +12639,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.04' ;
-var updateTime = 'Wed 21 Apr 2021 14:51:10 (EDT)';
+var version = 'v6.8.05' ;
+var updateTime = 'Mon 03 May 2021 16:30:14 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -15266,8 +15266,8 @@ class Solver{
  * clearColor
  *------------------------------------------------------------------------
  */
-        this.clearColor     = readOptions.clearColor ?? true ;
-        this.clearColorValue= readOption(options.clearColorValue,    [0,0,0,0]   ) ;
+        this.clearColor     = options?.clearColor ?? true ;
+        this.clearColorValue= options?.clearColorValue ??    [0,0,0,0] ;
 
 /*------------------------------------------------------------------------
  * vertexShader
@@ -16109,11 +16109,12 @@ class Signal{
                     color   :   { type: 'v3', value: this.color         } ,
                     visible :   { type: 'f',  value: this.visible       } ,
                 } ,
-                geometry : this.lineGeom,
+                geometry      : this.lineGeom,
                 clearColor    : false,
-                clearColorValue : [0.,0.,0.,0.] ,
+                blend         : true ,
+                blendEquation : new BlendEquation( 'FUNC_ADD' ) ,
+                blendFunction : new BlendFunction( 'ONE', 'ONE' ) ,
         } ) ;
-
     } 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *  CONSTRUCTOR ENDS
@@ -16732,7 +16733,7 @@ class Message{
     }
 }
 
-/*=========================================================================
+/*========================================================================
  * SignalPlot( renderer, camera, options )
  *
  * Usage    :   Constructor for plotting. The inputs are as follows
@@ -16751,7 +16752,7 @@ class Message{
  *      -   xticks          :   array of xticks
  *      -   yticks          :   array of yticks
  *      -   callback        :   callback function
- *=========================================================================
+ *========================================================================
  */
 class SignalPlot{
     constructor(pltOptions={}){
