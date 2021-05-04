@@ -12639,8 +12639,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.05' ;
-var updateTime = 'Mon 03 May 2021 16:30:14 (EDT)';
+var version = 'v6.8.06' ;
+var updateTime = 'Tue 04 May 2021 13:47:58 (EDT)';
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -15990,30 +15990,31 @@ function getChannelMultiplier(cnl){
  *========================================================================
  */
 class Signal{
-    constructor(SampleTarget,noPltPoints=512,options={}){
+    constructor(SampleTarget,noPltPoints=512,options={}, parent){
 
 /*------------------------------------------------------------------------
  * Initial values
  *------------------------------------------------------------------------
  */
         this.cgl        = cgl ;
-        this.sample     = SampleTarget ;
+        this._sample     = SampleTarget ;
         this.noPltPoints= noPltPoints ;
         this.pltTime    = 0. ;
         this.lineGeom   = new LineGeometry(this.noPltPoints) ;
+        this.parent = parent ;
 
         /* reading options */
-        this.minValue   = readOption(options.minValue,  0               ) ;
-        this.maxValue   = readOption(options.maxValue,  1               ) ;
-        this.restValue  = readOption(options.restValue, 0               ) ;
-        this.timeWindow = readOption(options.timeWindow,1000            ) ;
-        this.linewidth  = readOption(options.linewidth, 1               ) ;
-        this.probePosition = readOption( options.probePosition,[0.5,0.5]) ;
-        this.color      = readOption(options.color,     [0,0,0]         ) ;
-        this.channel    = readOption(options.channel,   'r'             ) ;
-        this.visible    = readOption(options.visible,   true            ) ;
-        this.callback   = readOption(options.callback, function(){}     ) ;
-        this.name       = readOption(options.name   , 'val'             ) ;
+        this._minValue   = readOption(options.minValue,  0              ) ;
+        this._maxValue   = readOption(options.maxValue,  1              ) ;
+        this._restValue  = readOption(options.restValue, 0              ) ;
+        this._timeWindow = readOption(options.timeWindow,1000           ) ;
+        this._linewidth  = readOption(options.linewidth, 1              ) ;
+        this._probePosition = readOption( options.probePosition,[0.5,0.5]) ;
+        this._color      = readOption(options.color,     [0,0,0]        ) ;
+        this._channel    = readOption(options.channel,   'r'            ) ;
+        this._visible    = readOption(options.visible,   true           ) ;
+        this._callback   = readOption(options.callback, function(){}    ) ;
+        this._name       = readOption(options.name   , 'val'            ) ;
 
         this.lineGeom.width = this.linewidth ;
         this.channelMultiplier = getChannelMultiplier(this.channel) ;
@@ -16160,14 +16161,21 @@ class Signal{
         var oldWindow = this.timeWindow ;
         this.scaleTimeWindow.setUniform('oldWindow',oldWindow       ) ;
         this.scaleTimeWindow.setUniform('newWindow',timeWindow      ) ;
-        this.timeWindow = timeWindow ;
+        this._timeWindow = timeWindow ;
         this.scaleTimeWindow.render() ;
         this.wA2b.render() ;
         this.hist.setUniform('shift',0) ;
         this.hist.render() ;
         this.wA2b.render() ;
+        this.parent.initBackground() ;
         this.render() ;
         return ;
+    }
+    get timeWindow(){
+        return this._timeWindow  ;
+    }
+    set timeWindow(nv){
+        this.updateTimeWindow(nv) ;
     }
 
 /*------------------------------------------------------------------------
@@ -16175,21 +16183,37 @@ class Signal{
  *------------------------------------------------------------------------
  */
     setChannel(c){
-        this.channel = c ;
+        this._channel = c ;
         this.channelMultiplier = getChannelMultiplier(c) ;
 
         this.hist.setUniform('channel', this.channelMultiplier) ;
+    }
+
+    get channel(){
+        return this._channel ;
+    }
+    set channel(nv){
+        this.setChannel(nv) ;
     }
 
 /*------------------------------------------------------------------------
  * set pobe position for the signal
  *------------------------------------------------------------------------
  */
+
     setProbePosition(probePosition){
         this.init(this.pltTime) ;
-        this.probePosition = probePosition ;
+        this._probePosition = probePosition ;
         this.hist.setUniform('probePosition',this.probePosition) ;
         return ;
+    }
+
+    get probePosition(){
+        return this._probePosition ;
+    }
+
+    set probePosition(nv){
+        this.setProbePosition(nv) ;
     }
 
 /*------------------------------------------------------------------------
@@ -16205,9 +16229,18 @@ class Signal{
  *------------------------------------------------------------------------
  */
     setMinValue(minValue){
-        this.minValue = minValue ;
+        this._minValue = minValue ;
         this.line.setUniform('minValue', this.minValue) ;
+        this.parent.initBackground() ;
         return ;
+    }
+
+    get minValue(){
+        return this._minValue ;
+    }
+
+    set minValue(nv){
+        this.setMinValue(nv) ;
     }
 
 /*------------------------------------------------------------------------
@@ -16215,19 +16248,36 @@ class Signal{
  *------------------------------------------------------------------------
  */
     setMaxValue(maxValue){
-        this.maxValue = maxValue ;
+        this._maxValue = maxValue ;
         this.line.setUniform('maxValue', this.maxValue);
+        this.parent.initBackground() ;
         return ;
     }
 
+    get maxValue(){
+        return this._maxValue ;
+    }
+
+    set maxValue(nv){
+        this.setMaxValue(nv) ;
+    }
+    
 /*------------------------------------------------------------------------
  * set the rest (default) value of the signal
  *------------------------------------------------------------------------
  */
     setRestValue(restValue){
-        this.restValue = restValue ;
+        this._restValue = restValue ;
         this.iplt.setUniform('restValue', this.restValue );
+        this.parent.initBackground() ;
         return ;
+    }
+
+    get restValue(){
+        return this._restValue ;
+    }
+    set restValue(nv){
+        this.setRestValue(nv) ;
     }
 
 /*------------------------------------------------------------------------
@@ -16235,9 +16285,17 @@ class Signal{
  *------------------------------------------------------------------------
  */
     setColor(color){
-        this.color = color  ;
+        this._color = color  ;
         this.line.setUniform('color',this.color);
+        this.parent.initBackground() ;
         return ;
+    }
+
+    get color(){
+        return this._color ;
+    }
+    set color(nv){
+        this.setColor(nv) ;
     }
 
 /*------------------------------------------------------------------------
@@ -16245,10 +16303,18 @@ class Signal{
  *------------------------------------------------------------------------
  */
     setLinewidth(lw){
-        this.linewidth = lw ;
+        this._linewidth = lw ;
         this.lineGeom.width = this.linewidth ;
         this.material.linewidth = this.linewidth ;
+        this.parent.initBackground() ;
         return ;
+    }
+
+    get linewidth(){
+        return this._linewidth ;
+    }
+    set linewidth(nv){
+        this.setLinewidth(nv) ;
     }
 
 /*------------------------------------------------------------------------
@@ -16256,9 +16322,17 @@ class Signal{
  *------------------------------------------------------------------------
  */
     setSampleTarget(ST){
-        this.sample = ST ;
+        this._sample = ST ;
         this.hist.setUniform('surf',this.sample) ;
     }
+
+    get sample(){
+        return this._sample ;
+    }
+    set sample(nv){
+        this.setSampleTarget(nv) ;
+    }
+
 
 /*------------------------------------------------------------------------
  * reset(Opts)
@@ -16309,12 +16383,28 @@ class Signal{
     }
 
 /*------------------------------------------------------------------------
+ * set visiblity of the signal plot
+ *------------------------------------------------------------------------
+ */
+    setVisiblity( flag ){
+        this._visible = flag ;
+        this.line.setUniform('visible',flag) ;
+        this.parent.initBackground() ;
+    }
+
+    get visible(){
+        return this._visible ;
+    }
+    set visible(nv){
+        this.setVisiblity(nv) ;
+    }
+
+/*------------------------------------------------------------------------
  * hide the signal plot
  *------------------------------------------------------------------------
  */
     hide(){
-        this.visible = 0.0 ;
-        this.line.setUniform('visible',0.0) ;
+        this.visible = false ;
     }
 
 /*------------------------------------------------------------------------
@@ -16323,18 +16413,32 @@ class Signal{
  */
     show(){
         this.visible = true ;
-        this.line.setUniform('visible',1.0) ;
     }
 
 /*------------------------------------------------------------------------
- * set visiblity of the signal plot
+ * callback
  *------------------------------------------------------------------------
  */
-    setVisiblity( flag ){
-        this.visible = flag ;
-        this.line.setUniform('visible',flag) ;
+    get callback(){
+        return this._callback ;
     }
 
+    set callback(nv){
+        this._callback = nv ?? this._callback ;
+    }
+
+/*------------------------------------------------------------------------
+ * name
+ *------------------------------------------------------------------------
+ */
+    get name(){
+        return this._name ;
+    }
+    set name(nv){
+        this._name = nv ;
+        this.parent.initBackground() ;
+    }
+        
 /*------------------------------------------------------------------------
  * render
  *------------------------------------------------------------------------
@@ -17079,7 +17183,7 @@ class SignalPlot{
         var newSignal = new Signal(
                     SampleTarget,
                     this.noPltPoints,
-                    options ) ;
+                    options ,this) ;
         this.signals.push( newSignal ) ;
         this.noSignals ++ ;
         this.yticks.min = newSignal.minValue ;
@@ -17425,7 +17529,7 @@ class PhasePlot{
         }else{
             this._grid = false ;
         }
-        this.initBackhround() ;
+        this.initBackground() ;
     }
 
     // gridColor .........................................................
