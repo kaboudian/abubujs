@@ -10080,7 +10080,7 @@ var lvtxShader = { value : `#version 300 es
  * lvtxShader   : Shader for Creating Triangulated Signal Plots
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Tue 04 May 2021 20:43:34 (EDT)
+ * DATE         :   Tue 04 May 2021 21:08:42 (EDT)
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *========================================================================
  */
@@ -10117,11 +10117,9 @@ void main() {
     if ( gl_InstanceID > 0 ){
         n1 = p[2]-p[0] ;
         n1 = vec2(-n1.y,n1.x) ;
-        if (gl_InstanceID == (size.x-2)){
-            n2 = n1 ;
-        }
+        n2 = n1 ;
     }
-    if ( gl_InstanceID < (size.x-1 ) ){
+    if ( gl_InstanceID < (size.x-2 ) ){
         n2 = p[3] - p[1] ;
         n2 = vec2(-n2.y,n2.x ) ;
 
@@ -12669,7 +12667,7 @@ function getColormaps(){
 
 
 var version = 'v6.8.07' ;
-var updateTime = 'Tue 04 May 2021 20:46:37 (EDT)' ;
+var updateTime = 'Tue 04 May 2021 21:09:00 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
