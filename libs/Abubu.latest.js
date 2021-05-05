@@ -10018,7 +10018,6 @@ precision highp float; precision highp int;
  * Interface Variables
  *========================================================================
  */
-in      vec2        pixPos ;
 uniform vec3        color ;
 uniform float       visible ;
 out     vec4        FragColor ;
@@ -10029,7 +10028,7 @@ out     vec4        FragColor ;
  */
 void main()
 {
-    FragColor = vec4(color,1.0);
+    FragColor = vec4(color,visible);
 }` } ;
 
 
@@ -10078,39 +10077,69 @@ void main()
 
 var lvtxShader = { value : `#version 300 es
 /*========================================================================
- * lvtxShader   : Shader for Creating Plots
+ * lvtxShader   : Shader for Creating Triangulated Signal Plots
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 05:06:21 PM EDT
+ * DATE         :   Tue 04 May 2021 20:43:34 (EDT)
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *========================================================================
  */
-precision highp float; precision highp int;
+precision highp float; 
+precision highp int;
 
-/*-------------------------------------------------------------------------
- * Varying variables must be defined here
- *-------------------------------------------------------------------------
- */
-out     vec2        pixPos ;
 uniform sampler2D   map ;
 uniform float       minValue ;
 uniform float       maxValue ;
-in      vec4        position;
+uniform vec2        linewidth ;
 
-/*=========================================================================
- * Main body of the vertex shader
- *=========================================================================
+/*========================================================================
+ * main body of the shader
+ *========================================================================
  */
-void main()
-{
-    float  amp = maxValue-minValue ;
-    pixPos = position.xy ;   /* uv.x, uv.y is always in [0,1.0] */
-    vec4 point = texture(map, position.xy ) ;
-    vec2 pos ;
-    pos.x  = point.a ;
-    pos.y  = (point.r-minValue)/amp ;
-    //pos.x = position.x ;
-    gl_Position = vec4(pos.x*2.-1., pos.y*2.-1.,0., 1.0) ;
+void main() {
+    /* calculating normal direction */
+    vec2 n1 , n2 ;  /* normal direction at left and right side of 
+                       the line segment */
+    
+    ivec2 size = textureSize(map, 0) ;
+
+    vec2 p[4] ;
+    vec4 t ;
+    for( int i=0 ; i<4 ; i++){
+        t = texelFetch( map, ivec2( gl_InstanceID-1+i, 0 ),0) ;
+        p[i].x = t.a*2.-1.  ;
+        p[i].y = 2.*(t.r-minValue)/(maxValue-minValue) -1. ;
+    }
+        
+    n1 = vec2( 0.,1.) ;
+    n2 = vec2( 0.,1.) ;
+
+    if ( gl_InstanceID > 0 ){
+        n1 = p[2]-p[0] ;
+        n1 = vec2(-n1.y,n1.x) ;
+        if (gl_InstanceID == (size.x-2)){
+            n2 = n1 ;
+        }
+    }
+    if ( gl_InstanceID < (size.x-1 ) ){
+        n2 = p[3] - p[1] ;
+        n2 = vec2(-n2.y,n2.x ) ;
+
+        if( gl_InstanceID == 0 ){
+            n1=n2 ;
+        }
+    }
+
+    n1 = normalize(n1) ;
+    n2 = normalize(n2) ;
+
+    vec2 vertCrds[4] ;
+    vertCrds[0] = p[1] + n1*linewidth ;
+    vertCrds[1] = p[1] - n1*linewidth ;
+    vertCrds[2] = p[2] + n2*linewidth ;
+    vertCrds[3] = p[2] - n2*linewidth ;
+
+    gl_Position = vec4(vertCrds[ gl_VertexID ] , 0., 1.);
 }` } ;
 
 
@@ -12639,8 +12668,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.06' ;
-var updateTime = 'Tue 04 May 2021 13:47:58 (EDT)';
+var version = 'v6.8.07' ;
+var updateTime = 'Tue 04 May 2021 20:46:37 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -16008,7 +16037,7 @@ class Signal{
         this._maxValue   = readOption(options.maxValue,  1              ) ;
         this._restValue  = readOption(options.restValue, 0              ) ;
         this._timeWindow = readOption(options.timeWindow,1000           ) ;
-        this._linewidth  = readOption(options.linewidth, 1              ) ;
+        this._linewidthPixels  = readOption(options.linewidth, 1              ) ;
         this._probePosition = readOption( options.probePosition,[0.5,0.5]) ;
         this._color      = readOption(options.color,     [0,0,0]        ) ;
         this._channel    = readOption(options.channel,   'r'            ) ;
@@ -16109,8 +16138,12 @@ class Signal{
                     map     :   { type: 't',  value: this.ccrr          } ,
                     color   :   { type: 'v3', value: this.color         } ,
                     visible :   { type: 'f',  value: this.visible       } ,
+                    linewidth : { type : 'v2', value : this.linewidthVec } ,
                 } ,
-                geometry      : this.lineGeom,
+                geometry : {} ,
+                draw     : new Abubu.DrawArraysInstanced( 
+                           'triangle_strip', 0, 4, this.noPltPoints -1 ) ,
+
                 clearColor    : false,
                 blend         : true ,
                 blendEquation : new BlendEquation( 'FUNC_ADD' ) ,
@@ -16303,15 +16336,19 @@ class Signal{
  *------------------------------------------------------------------------
  */
     setLinewidth(lw){
-        this._linewidth = lw ;
-        this.lineGeom.width = this.linewidth ;
+        this._linewidthPixels = lw ;
+        this.line.uniforms.linewidth.value = this.linewidthVec ;
         this.material.linewidth = this.linewidth ;
         this.parent.initBackground() ;
         return ;
     }
 
+    get linewidthVec(){
+        return [this.linewidth/gl.canvas.width, this.linewidth/gl.canvas.height ] ;
+    }
+
     get linewidth(){
-        return this._linewidth ;
+        return this._linewidthPixels ;
     }
     set linewidth(nv){
         this.setLinewidth(nv) ;

@@ -1,5 +1,5 @@
-var version = 'v6.8.06' ;
-var updateTime = 'Tue 04 May 2021 13:47:58 (EDT)';
+var version = 'v6.8.07' ;
+var updateTime = 'Tue 04 May 2021 20:46:37 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -3367,7 +3367,7 @@ class Signal{
         this._maxValue   = readOption(options.maxValue,  1              ) ;
         this._restValue  = readOption(options.restValue, 0              ) ;
         this._timeWindow = readOption(options.timeWindow,1000           ) ;
-        this._linewidth  = readOption(options.linewidth, 1              ) ;
+        this._linewidthPixels  = readOption(options.linewidth, 1              ) ;
         this._probePosition = readOption( options.probePosition,[0.5,0.5]) ;
         this._color      = readOption(options.color,     [0,0,0]        ) ;
         this._channel    = readOption(options.channel,   'r'            ) ;
@@ -3468,8 +3468,12 @@ class Signal{
                     map     :   { type: 't',  value: this.ccrr          } ,
                     color   :   { type: 'v3', value: this.color         } ,
                     visible :   { type: 'f',  value: this.visible       } ,
+                    linewidth : { type : 'v2', value : this.linewidthVec } ,
                 } ,
-                geometry      : this.lineGeom,
+                geometry : {} ,
+                draw     : new Abubu.DrawArraysInstanced( 
+                           'triangle_strip', 0, 4, this.noPltPoints -1 ) ,
+
                 clearColor    : false,
                 blend         : true ,
                 blendEquation : new BlendEquation( 'FUNC_ADD' ) ,
@@ -3662,15 +3666,19 @@ class Signal{
  *------------------------------------------------------------------------
  */
     setLinewidth(lw){
-        this._linewidth = lw ;
-        this.lineGeom.width = this.linewidth ;
+        this._linewidthPixels = lw ;
+        this.line.uniforms.linewidth.value = this.linewidthVec ;
         this.material.linewidth = this.linewidth ;
         this.parent.initBackground() ;
         return ;
     }
 
+    get linewidthVec(){
+        return [this.linewidth/gl.canvas.width, this.linewidth/gl.canvas.height ] ;
+    }
+
     get linewidth(){
-        return this._linewidth ;
+        return this._linewidthPixels ;
     }
     set linewidth(nv){
         this.setLinewidth(nv) ;
