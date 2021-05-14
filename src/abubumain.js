@@ -1,5 +1,5 @@
-var version = 'v6.8.07' ;
-var updateTime = 'Tue 04 May 2021 21:09:00 (EDT)' ;
+var version = 'v6.8.08' ;
+var updateTime = 'Fri 14 May 2021 19:05:43 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -3471,8 +3471,8 @@ class Signal{
                     linewidth : { type : 'v2', value : this.linewidthVec } ,
                 } ,
                 geometry : {} ,
-                draw     : new Abubu.DrawArraysInstanced( 
-                           'triangle_strip', 0, 4, this.noPltPoints -1 ) ,
+                draw     : new Abubu.DrawArrays( 
+                           'triangle_strip', 0, 4*(this.noPltPoints-1) ) ,
 
                 clearColor    : false,
                 blend         : true ,

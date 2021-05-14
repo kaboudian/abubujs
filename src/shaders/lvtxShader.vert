@@ -26,10 +26,13 @@ void main() {
     
     ivec2 size = textureSize(map, 0) ;
 
+    int vertexID   = gl_VertexID % 4 ;
+    int instanceID = gl_VertexID /4 ;
+
     vec2 p[4] ;
     vec4 t ;
     for( int i=0 ; i<4 ; i++){
-        t = texelFetch( map, ivec2( gl_InstanceID-1+i, 0 ),0) ;
+        t = texelFetch( map, ivec2( instanceID-1+i, 0 ),0) ;
         p[i].x = t.a*2.-1.  ;
         p[i].y = 2.*(t.r-minValue)/(maxValue-minValue) -1. ;
     }
@@ -37,16 +40,16 @@ void main() {
     n1 = vec2( 0.,1.) ;
     n2 = vec2( 0.,1.) ;
 
-    if ( gl_InstanceID > 0 ){
+    if ( instanceID > 0 ){
         n1 = p[2]-p[0] ;
         n1 = vec2(-n1.y,n1.x) ;
         n2 = n1 ;
     }
-    if ( gl_InstanceID < (size.x-2 ) ){
+    if ( instanceID < (size.x-2 ) ){
         n2 = p[3] - p[1] ;
         n2 = vec2(-n2.y,n2.x ) ;
 
-        if( gl_InstanceID == 0 ){
+        if( instanceID == 0 ){
             n1=n2 ;
         }
     }
@@ -60,5 +63,5 @@ void main() {
     vertCrds[2] = p[2] + n2*linewidth ;
     vertCrds[3] = p[2] - n2*linewidth ;
 
-    gl_Position = vec4(vertCrds[ gl_VertexID ] , 0., 1.);
+    gl_Position = vec4(vertCrds[ vertexID ] , 0., 1.);
 }
