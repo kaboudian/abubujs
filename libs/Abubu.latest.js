@@ -12669,8 +12669,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.08' ;
-var updateTime = 'Fri 14 May 2021 19:05:43 (EDT)' ;
+var version = 'v6.8.09' ;
+var updateTime = 'Thu 15 Jul 2021 17:22:13 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -15972,6 +15972,58 @@ class UnitCubeGeometry{
  */
 }
 
+/*========================================================================
+ * Colormap
+ *========================================================================
+ */
+class Colormap{
+    constructor(name ){
+        this._list = getColormapList() ;
+        this._colormaps = getColormaps() ;
+        this._name = 'rainbowHotSpring' ;
+        this._map  = this._colormaps[this._name] ;
+
+        this.name  = name ;
+    } 
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *  CONSTRUCTOR ENDS
+ *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+
+    get list(){
+        return this._list ;
+    }
+
+    get names(){
+        return this._list ;
+    }
+    
+    get name(){
+        return this._name ;
+    }
+
+    set name(nn){
+        if ( nn ) {
+            if ( this._colormaps[nn] ){
+                this._name = nn  ;
+                this._map  = this._colormaps[this._name] ;
+            }
+        }
+    }
+
+    get map(){
+        return this.map ;
+    }
+
+    get texture(){
+        return this._map.texture ;
+    }
+
+    choose(nn){
+        this.name = nn ;
+    }
+}
 
 /*========================================================================
  * Get Channel Multiplier
@@ -23825,6 +23877,7 @@ this.Plot2D              = Plot2D ;
 this.Tvsx                = Tvsx ;
 this.VolumeRayCaster     = VolumeRayCaster ;
 this.getColormapList     = getColormapList ;
+this.Colormap            = Colormap ;
 this.Probe               = Probe ;
 this.TextureReader       = TextureReader ;
 this.ProbeRecorder       = ProbeRecorder ;
