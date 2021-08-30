@@ -12669,8 +12669,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.09' ;
-var updateTime = 'Thu 15 Jul 2021 17:22:13 (EDT)' ;
+var version = 'v6.8.11' ;
+var updateTime = 'Mon 30 Aug 2021 13:40:05 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -23416,6 +23416,7 @@ class Editor{
         this._modes     = [] ;
         this._themes    = [] ;
         this._options   = [] ;
+        this._shaderTypes = [] ;
         this._no        = 0;
         this._editorId  = o?.editor ?? null ;
         this._editorId  = o?.id ?? this.editorId ;
@@ -23436,6 +23437,7 @@ class Editor{
             this._titles.push( source?.title ?? key ) ;
             this._themes.push( source?.theme ?? 'ace/theme/tomorrow' ) ;
             this._modes.push(  source?.mode ?? 'ace/mode/glsl');
+            this._shaderTypes.push(source?.shaderType ?? "fragmentShader") ;
             this._options.push(source?.options ?? {} ) ;
         }
 
@@ -23540,11 +23542,21 @@ class Editor{
         return this.src.solvers ;
     }
 
+    get shaderType(){
+        return this._shaderTypes[this.no] ;
+    }
+
     set source(ns){
         if( ns.length > 15 ){ 
             this.src.source = ns ;
+            let opt = this.options ;
             for(let solver of this.solvers){
-                solver.fragmentShader = ns ;
+                if ( this.shaderType == 'vertexShader' || 
+                     this.shaderType == 'vertex' ){
+                    solver.vertexShader = ns ;
+                }else{
+                    solver.fragmentShader = ns ;
+                }
             }
         }
     }
