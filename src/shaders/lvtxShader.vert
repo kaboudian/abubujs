@@ -1,6 +1,6 @@
 #version 300 es
 /*========================================================================
- * lvtxShader   : Shader for Creating Triangulated Signal Plots
+ * lvtxShader   :   Shader for Creating Triangulated Signal Plots
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
  * DATE         :   Tue 04 May 2021 21:08:42 (EDT)

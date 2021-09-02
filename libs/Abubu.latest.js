@@ -9499,451 +9499,51 @@ void main()
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * bgndShader
+ * vertShader
  *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
  */
-var bgndShader = { value : `#version 300 es
-/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
- * bgndShader   :   COLOR BACGROUNDS
- *
- * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 05:05:01 PM EDT
- * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
- *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
- */
-precision highp float; precision highp int;
-
-/*-------------------------------------------------------------------------
- * Varying variables
- *-------------------------------------------------------------------------
- */
-in vec2        pixPos ;
-uniform sampler2D   bgrnd ;
-uniform vec3        color ;
-out vec4 FragColor ;
-
-/*=========================================================================
- * Main body
- *=========================================================================
- */
-void main()
-{    
-    vec4    crvc = texture(bgrnd, pixPos ) ;
-
-    FragColor = mix(vec4(color,1.0),crvc, crvc.a ) ;
-}` } ;
-
-/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * dispBackgroundPhasShader
- *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- */
-var dispBackgroundPhasShader = { value : `#version 300 es
+var vertShader = { value : `#version 300 es
 /*========================================================================
- * dispBackgroundPhasShader 
+ * vertShader   :  Default Vertex Shader
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 05:05:23 PM EDT
+ * DATE         :   Thu 03 Aug 2017 05:07:21 PM EDT
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *========================================================================
  */
 precision highp float; precision highp int;
 
 /*========================================================================
- * Interface Variables
- *========================================================================
- */
-uniform float       minValue ;
-uniform float       maxValue ;
-uniform vec3        tiptColor ;
-uniform float       tiptThickness ;     
-uniform vec4        minColor, maxColor ;
-uniform bool        enableMaxColor, enableMinColor ;
-
-uniform sampler2D   phas ;
-uniform sampler2D   background ;
-uniform sampler2D   map ;
-uniform sampler2D   tipt ;
-uniform sampler2D   clrm ;
-uniform sampler2D   prob ;
-uniform vec4        channelMultiplier ;
-uniform vec3        phaseColor ;
-in  vec2            pixPos ;
-out vec4            FragColor ;
-
-/*=========================================================================
- * Hyperbolic Tangent
- *=========================================================================
- */
-float Tanh(float x){
-    if ( x<-3.0){
-        return -1.0 ;
-    } else if (x>3.0){
-        return 1.0 ;
-    } else {
-        return x*(27.0 + x*x)/(27.0+9.0*x*x) ;
-    }
-}
-
-/*=========================================================================
- * Main body of Display Fragment Shader 
- *=========================================================================
- */
-void main()
-{
-    float   isTipt ;
-    float   r, gamma;
-    vec4    t = texture(map,pixPos);
-    vec4    phase = texture( phas, pixPos ) ;
-    
-    vec2 size   = vec2(textureSize(map,0)) ;
-    vec2 ii = vec2(1.,0.)/size ;
-    vec2 jj = vec2(0.,1.)/size ;
-
-    
-    isTipt = texture(tipt, pixPos).a ;
-    
-    isTipt = max(isTipt, texture(tipt, pixPos+ii            ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos+ii+jj         ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos+jj            ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos-ii            ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos-ii-jj         ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos-jj            ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos+ii-jj         ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos-ii+jj         ).a ) ;
-
-    r = dot(t, channelMultiplier) ;
-    r = (r-minValue)/(maxValue-minValue) ;
-
-    vec4 pixColor   = texture(  clrm, vec2(r,0.5)   ) ;
-    vec4 probColor  = texture(  prob, pixPos        )  ;
-
-    if ( enableMinColor ) if (r < 0.) pixColor = minColor ;
-    if ( enableMaxColor ) if (r >1.) pixColor = maxColor ;
-
-    if ( phase.r > .98 ){
-        FragColor    = mix(mix(pixColor, vec4(tiptColor,1.0),isTipt), probColor, probColor.a) ;
-    }else{
-        FragColor    = vec4(phaseColor,1.) ;
-        r = 0.0 ;
-    }
-
-    vec4 backgroundColor = texture(background, pixPos ) ;
-    FragColor = mix(backgroundColor,FragColor, r) ;
-}` } ;
-
-/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * dispPhasShader
- *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- */
-var dispPhasShader = { value : `#version 300 es
-/*========================================================================
- * dispPhasShader 
- *
- * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 05:05:23 PM EDT
- * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
- *========================================================================
- */
-precision highp float; precision highp int;
-
-/*========================================================================
- * Interface Variables
- *========================================================================
- */
-uniform float       minValue ;
-uniform float       maxValue ;
-uniform vec3        tiptColor ;
-uniform float       tiptThickness ;     
-uniform vec4        minColor, maxColor ;
-uniform bool        enableMaxColor, enableMinColor ;
-
-uniform sampler2D   phas ;
-uniform sampler2D   map ;
-uniform sampler2D   tipt ;
-uniform sampler2D   clrm ;
-uniform sampler2D   prob ;
-uniform vec4        channelMultiplier ;
-uniform vec3        phaseColor ;
-in  vec2            pixPos ;
-out vec4            FragColor ;
-
-/*=========================================================================
- * Hyperbolic Tangent
- *=========================================================================
- */
-float Tanh(float x){
-    if ( x<-3.0){
-        return -1.0 ;
-    } else if (x>3.0){
-        return 1.0 ;
-    } else {
-        return x*(27.0 + x*x)/(27.0+9.0*x*x) ;
-    }
-}
-
-/*=========================================================================
- * Main body of Display Fragment Shader 
- *=========================================================================
- */
-void main()
-{
-    float   isTipt ;
-    float   r, gamma;
-    vec4    t = texture(map,pixPos);
-    vec4    phase = texture( phas, pixPos ) ;
-    
-    vec2 size   = vec2(textureSize(map,0)) ;
-    vec2 ii = vec2(1.,0.)/size ;
-    vec2 jj = vec2(0.,1.)/size ;
-
-    
-    isTipt = texture(tipt, pixPos).a ;
-    
-    isTipt = max(isTipt, texture(tipt, pixPos+ii            ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos+ii+jj         ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos+jj            ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos-ii            ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos-ii-jj         ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos-jj            ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos+ii-jj         ).a ) ;
-    isTipt = max(isTipt, texture(tipt, pixPos-ii+jj         ).a ) ;
-
-    r = dot(t, channelMultiplier) ;
-    r = (r-minValue)/(maxValue-minValue) ;
-
-    vec4 pixColor   = texture(  clrm, vec2(r,0.5)   ) ;
-    vec4 probColor  = texture(  prob, pixPos        )  ;
-
-    if ( enableMinColor ) if (r < 0.) pixColor = minColor ;
-    if ( enableMaxColor ) if (r >1.) pixColor = maxColor ;
-
-    if ( phase.r > .98 ){
-        FragColor    = mix(mix(pixColor, vec4(tiptColor,1.0),isTipt), probColor, probColor.a) ;
-    }else{
-        FragColor    = vec4(phaseColor,1.) ;
-    }
-}` } ;
-
-/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * dispShader
- *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- */
-var dispShader = { value : `#version 300 es
-/*========================================================================
- * dispShader 
- *
- * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 05:05:29 PM EDT
- * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
- *========================================================================
- */
-precision highp float; precision highp int;
-
-/*========================================================================
- * Interface Variables
- *========================================================================
- */
-uniform float       minValue ;
-uniform float       maxValue ;
-uniform vec3        tiptColor ;
-uniform vec4        minColor, maxColor ;
-uniform bool        enableMaxColor, enableMinColor ;
-uniform float       tiptThickness ;                                                      
-uniform sampler2D   map ;
-uniform sampler2D   tipt ;
-uniform sampler2D   clrm ;
-uniform sampler2D   prob ;
-uniform vec4        channelMultiplier ;
-
-in  vec2            pixPos ;
-out vec4            FragColor ;
-
-/*=========================================================================
- * Hyperbolic Tangent
- *=========================================================================
- */
-float Tanh(float x){
-    if ( x<-3.0){
-        return -1.0 ;
-    } else if (x>3.0){
-        return 1.0 ;
-    } else {
-        return x*(27.0 + x*x)/(27.0+9.0*x*x) ;
-    }
-}
-
-/*=========================================================================
- * Main body of Display Fragment Shader 
- *=========================================================================
- */
-void main()
-{
-    float   isTipt ;
-    float   r, gamma;
-    vec4    t = texture(map,pixPos);
-    
-    vec2 size   = vec2(textureSize(map,0)) ;
-    vec2 ii = vec2(1.,0.)/size ;
-    vec2 jj = vec2(0.,1.)/size ;
-    
-    isTipt = texture(tipt, pixPos).a ;
-    for(float i=-0.5*tiptThickness ; i<(tiptThickness*0.5) ; i++){
-        for(float j=-0.5*tiptThickness ; j<(tiptThickness*0.5) ; j++){
-            isTipt = max(isTipt, texture(tipt, pixPos + ii*i).a) ;
-            isTipt = max(isTipt, texture(tipt, pixPos + jj*j).a) ;
-            isTipt = max(isTipt, texture(tipt, pixPos + ii*i + jj*j).a) ;
-        }
-    }
-
-    r = dot(t, channelMultiplier) ;
-    r = (r-minValue)/(maxValue-minValue) ;
-
-
-    vec4 pixColor   = texture(  clrm, vec2(r,0.5)   ) ;
-
-    if ( enableMinColor ) if (r < 0.) pixColor = minColor ;
-    if ( enableMaxColor ) if (r >1.) pixColor = maxColor ;
-
-    vec4 probColor  = texture(  prob, pixPos        )  ;
-    FragColor    = mix(mix(pixColor, vec4(tiptColor,1.0),isTipt), probColor, probColor.a) ;
-}` } ;
-
-/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * filamentShader
- *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- */
-var filamentShader = { value : `#version 300 es
-/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
- * filamentShader:  calculating  the filament
- *
- * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Fri 15 Jun 2018 16:54:56 (EDT) 
- * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
- *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
- */
-precision highp float;
-precision highp int ;
-
-/*------------------------------------------------------------------------
  * Interface variables
- *------------------------------------------------------------------------
- */
-in vec2     pixPos ;
-
-uniform sampler2D   inFtrgt, inStrgt ;
-uniform sampler2D   crdtMap ;
-
-uniform float       filamentThickness ;
-
-uniform vec3        domainResolution ;
-uniform float       mx, my ;
-uniform float       filamentThreshold ;
-uniform float       filamentBorder ;
-
-layout (location = 0 ) out vec4 outTrgt ;
-
-/*========================================================================
- * Texture3D
  *========================================================================
  */
-vec4 Texture3D( sampler2D S, vec3 texCoord )
-{
-    vec4    vColor1, vColor2 ;
-    float   x, y ;
-    float   wd = mx*my - 1.0 ;
+in  vec3 position;
 
-    float zSliceNo  = floor( texCoord.z*mx*my) ;
+out vec2 pixPos ;
+out vec3 pixCrd ;
 
-    x = texCoord.x / mx ;
-    y = texCoord.y / my ;
-
-    x += (mod(zSliceNo,mx)/mx) ;
-    y += floor((wd-zSliceNo)/ mx )/my ;
-
-    vColor1 = texture( S,  vec2(x,y) ) ;
-
-    zSliceNo = ceil( texCoord.z*mx*my   ) ;
-
-    x = texCoord.x / mx ;
-    y = texCoord.y / my ;
-
-    x += (mod(zSliceNo,mx)/mx) ;
-    y += floor((wd-zSliceNo)/ mx )/my ;
-    vColor2 = texture( S,  vec2(x,y) ) ;
-
-    return mix(
-        vColor2,
-        vColor1,
-        zSliceNo/(mx*my)-texCoord.z
-    ) ;
-}
-
-/*========================================================================
- * isFilament
- *========================================================================
+/*=========================================================================
+ * Main body of the vertex shader
+ *=========================================================================
  */
-bool isFilament( sampler2D S1, sampler2D S2, vec3 pos, vec3 ii ){
-    float s1 = 0. ;
-    float s2 = 0. ;
-
-    float f,v,d ;
-    vec3 cc ;
-    for (float i=0. ; i < 2. ; i++){
-        for (float j=0. ; j<2. ;j++){
-            for(float k=0. ; k<2. ; k++){
-                cc=  pos + vec3(i,j,k)*ii ;
-                v = Texture3D( S1, cc).r ;
-                f = v - filamentThreshold ;
-                d = v - Texture3D( S2, cc).r ;
-                s1 += step(0.,f) ;
-                s2 += step(0.,d) ;
-            }
-        }
-    }
-
-    bool b1 = ((s1>0.5) && (s1<7.5)) ;
-    bool b2 = ((s2>0.5) && (s2<7.5)) ;
-
-    return (b1 && b2) ;
-}
-
-/*========================================================================
- * main body of the filament shader
- *========================================================================
- */
-void main(){ 
-    bool s = false ;
-    vec3 ii = vec3(1.)/domainResolution ;
-    vec3 pos = texture( crdtMap, pixPos ).rgb ;
-
-    float upperVal = 1.-filamentBorder ;
-    float lowerVal = filamentBorder ;
-
-    
-    if (    pos.x<lowerVal ||   pos.x>upperVal || pos.y<lowerVal ||   
-            pos.y>upperVal ||   pos.z<lowerVal || pos.z>upperVal    ){
-        outTrgt = vec4(0.) ;
-        return ;
-    }
-
-    for (float i=-filamentThickness ; i < 1. ; i++)
-      for (float j=-filamentThickness ; j < 1. ; j++)
-        for (float k=-filamentThickness ; k < 1. ; k++)
-          s = s || isFilament( inFtrgt, inStrgt, pos+vec3(i,j,k)*ii, ii) ;
-
-    outTrgt = (s) ? vec4(1.):vec4(0.) ;
+void main()
+{   
+    pixPos = position.xy ;
+    pixCrd = position.xyz ;
+    gl_Position = vec4(position.x*2.-1., position.y*2.-1.,0.,1.0);
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * histShader
+ * wA2bShader
  *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
  */
-var histShader = { value : `#version 300 es
+var wA2bShader = { value : `#version 300 es
+
 /*========================================================================
- * histShader
+ * wA2bShader   :  BUFFER SWAP FRAGMENT SHADER  
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 05:05:40 PM EDT
+ * DATE         :   Thu 03 Aug 2017 05:07:29 PM EDT
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *========================================================================
  */
@@ -9953,70 +9553,16 @@ precision highp float; precision highp int;
  * Interface Variables
  *========================================================================
  */
-uniform vec2        probePosition ;
-uniform sampler2D   surf ;
-uniform sampler2D   curv ;
-uniform float       shift ;
-uniform vec4        channel ;
-
+uniform sampler2D   map ;
 in      vec2        pixPos ;
 layout (location = 0 ) out     vec4        FragColor ;
 /*=========================================================================
- * Main body 
+ * Main body of Buffer Swap Shader 
  *=========================================================================
  */
 void main()
 {
-    float r ;
-    vec4 probVal  = texture(surf , probePosition  ) ;
-    vec4 pixlVal  = texture(curv , vec2(pixPos.x+shift, pixPos.y )) ;
-
-    vec4 fragColor ;
-    fragColor.a     = pixPos.x  ;
-    fragColor.rgb   = pixlVal.rgb ;
-    r =    dot( probVal,channel) ;
-    
-    if (pixPos.x >= (1. - shift)){
-        fragColor.rgb = vec3(r,r,r) ;
-    }
-
-    FragColor = fragColor;
-}` } ;
-
-/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * ipltShader
- *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- */
-var ipltShader = { value : `#version 300 es
-/*========================================================================
- * ipltShader   : Fragmet Shader for Initializing Plots
- *
- * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 05:05:50 PM EDT
- * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
- *========================================================================
- */
-precision highp float; precision highp int;
-
-/*========================================================================
- * Interface Variables
- *========================================================================
- */
-in      vec2    pixPos ;
-uniform float   restValue ;
-
-layout (location = 0 ) out  vec4    FragColor1 ;
-layout (location = 1 ) out  vec4    FragColor2 ;
-
-/*=========================================================================
- * Main body of ipltShader
- *=========================================================================
- */
-void main()
-{
-    float r = restValue ;
-    FragColor1 = vec4(r,r,r,1.0) ;
-    FragColor2 = vec4(r,r,r,1.0) ;
+    FragColor = texture(map,pixPos) ;
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -10025,7 +9571,7 @@ void main()
  */
 var lfgmShader = { value : `#version 300 es
 /*========================================================================
- * lfgmShader   :  Fragmet Shader for Creating Plots
+ * lfgmShader   :   Fragmet Shader for Creating Line/Curve Plots
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
  * DATE         :   Thu 03 Aug 2017 05:06:02 PM EDT
@@ -10057,7 +9603,7 @@ void main()
  */
 var lpvtShader = { value : `#version 300 es
 /*========================================================================
- * lpvtShader   : Shader for Creating Plots
+ * lpvtShader   :   Vertex Shader for Creating Line/Curve Plots
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
  * DATE         :   Thu 03 Aug 2017 05:06:21 PM EDT
@@ -10101,7 +9647,7 @@ void main()
  */
 var lvtxShader = { value : `#version 300 es
 /*========================================================================
- * lvtxShader   : Shader for Creating Triangulated Signal Plots
+ * lvtxShader   :   Shader for Creating Triangulated Signal Plots
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
  * DATE         :   Tue 04 May 2021 21:08:42 (EDT)
@@ -10168,44 +9714,120 @@ void main() {
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * phaseDisplay
+ * histShader
  *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
  */
-var phaseDisplay = { value : `#version 300 es 
-/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
- * phaseDisplay.frag : displays the phase values on the screen
+var histShader = { value : `#version 300 es
+/*========================================================================
+ * histShader
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Mon 09 Nov 2020 11:20:50 (EST)
+ * DATE         :   Thu 03 Aug 2017 05:05:40 PM EDT
+ * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
+ *========================================================================
+ */
+precision highp float; precision highp int;
+
+/*========================================================================
+ * Interface Variables
+ *========================================================================
+ */
+uniform vec2        probePosition ;
+uniform sampler2D   surf ;
+uniform sampler2D   curv ;
+uniform float       shift ;
+uniform vec4        channel ;
+
+in      vec2        pixPos ;
+layout (location = 0 ) out     vec4        FragColor ;
+/*=========================================================================
+ * Main body 
+ *=========================================================================
+ */
+void main()
+{
+    float r ;
+    vec4 probVal  = texture(surf , probePosition  ) ;
+    vec4 pixlVal  = texture(curv , vec2(pixPos.x+shift, pixPos.y )) ;
+
+    vec4 fragColor ;
+    fragColor.a     = pixPos.x  ;
+    fragColor.rgb   = pixlVal.rgb ;
+    r =    dot( probVal,channel) ;
+    
+    if (pixPos.x >= (1. - shift)){
+        fragColor.rgb = vec3(r,r,r) ;
+    }
+
+    FragColor = fragColor;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * sctwShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var sctwShader = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * sctwShader   :  scales the time window
+ *
+ * PROGRAMMER   :   ABOUZAR KABOUDIAN
+ * DATE         :   Thu 03 Aug 2017 02:07:45 PM EDT
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
-precision highp float ;
-precision highp int ;
+precision highp float; precision highp int;
 
-in vec2 cc ;
-uniform sampler2D   icolor ;
+in vec2     pixPos ;
 
-out vec4 ocolor ;
+uniform sampler2D   map ;
+uniform float       oldWindow ;
+uniform float       newWindow ;
 
-#define     u   color.r
-#define     v   color.g
+layout (location =0 ) out vec4 FragColor ;
+
 void main(){
-    vec4 color = texture( icolor, cc ) ;
-
-    if ( u > 0.5 ){
-        ocolor = vec4( .8, 0.,0.,1. ) ;
-        return ;
-    }
-
-    if ( v>0.5 ){
-        ocolor = vec4(.378,0.639,0.851,1.) ;
-        return ;
-    }
-
-    ocolor=vec4(0) ;
-    //ocolor= vec4(vec3(0.99),1.) ;
+    float   scale = newWindow/oldWindow ;
+    float   x   = pixPos.x-(1.- 1./scale) ;
+    x *= scale ;
+    
+    FragColor = texture( map, vec2(x,0.5)) ;
     return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * ipltShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var ipltShader = { value : `#version 300 es
+/*========================================================================
+ * ipltShader   : Fragmet Shader for Initializing Plots
+ *
+ * PROGRAMMER   :   ABOUZAR KABOUDIAN
+ * DATE         :   Thu 03 Aug 2017 05:05:50 PM EDT
+ * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
+ *========================================================================
+ */
+precision highp float; precision highp int;
+
+/*========================================================================
+ * Interface Variables
+ *========================================================================
+ */
+in      vec2    pixPos ;
+uniform float   restValue ;
+
+layout (location = 0 ) out  vec4    FragColor1 ;
+layout (location = 1 ) out  vec4    FragColor2 ;
+
+/*=========================================================================
+ * Main body of ipltShader
+ *=========================================================================
+ */
+void main()
+{
+    float r = restValue ;
+    FragColor1 = vec4(r,r,r,1.0) ;
+    FragColor2 = vec4(r,r,r,1.0) ;
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -10300,35 +9922,79 @@ void main(){
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * sctwShader
+ * phaseDisplay
  *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
  */
-var sctwShader = { value : `#version 300 es
+var phaseDisplay = { value : `#version 300 es 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
- * sctwShader   :  scales the time window
+ * phaseDisplay.frag : displays the phase values on the screen
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 02:07:45 PM EDT
+ * DATE         :   Mon 09 Nov 2020 11:20:50 (EST)
+ * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float ;
+precision highp int ;
+
+in vec2 cc ;
+uniform sampler2D   icolor ;
+
+out vec4 ocolor ;
+
+#define     u   color.r
+#define     v   color.g
+void main(){
+    vec4 color = texture( icolor, cc ) ;
+
+    if ( u > 0.5 ){
+        ocolor = vec4( .8, 0.,0.,1. ) ;
+        return ;
+    }
+
+    if ( v>0.5 ){
+        ocolor = vec4(.378,0.639,0.851,1.) ;
+        return ;
+    }
+
+    ocolor=vec4(0) ;
+    //ocolor= vec4(vec3(0.99),1.) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * bgndShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var bgndShader = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * bgndShader   :   COLOR BACGROUNDS
+ *
+ * PROGRAMMER   :   ABOUZAR KABOUDIAN
+ * DATE         :   Thu 03 Aug 2017 05:05:01 PM EDT
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
  *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
 precision highp float; precision highp int;
 
-in vec2     pixPos ;
+/*-------------------------------------------------------------------------
+ * Varying variables
+ *-------------------------------------------------------------------------
+ */
+in vec2        pixPos ;
+uniform sampler2D   bgrnd ;
+uniform vec3        color ;
+out vec4 FragColor ;
 
-uniform sampler2D   map ;
-uniform float       oldWindow ;
-uniform float       newWindow ;
+/*=========================================================================
+ * Main body
+ *=========================================================================
+ */
+void main()
+{    
+    vec4    crvc = texture(bgrnd, pixPos ) ;
 
-layout (location =0 ) out vec4 FragColor ;
-
-void main(){
-    float   scale = newWindow/oldWindow ;
-    float   x   = pixPos.x-(1.- 1./scale) ;
-    x *= scale ;
-    
-    FragColor = texture( map, vec2(x,0.5)) ;
-    return ;
+    FragColor = mix(vec4(color,1.0),crvc, crvc.a ) ;
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -10449,34 +10115,278 @@ void main(){
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * tstpShader
+ * dispPhasShader
  *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
  */
-var tstpShader = { value : `#version 300 es
-/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
- * tstpShader   :   time step shader
+var dispPhasShader = { value : `#version 300 es
+/*========================================================================
+ * dispPhasShader 
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Wed 26 Sep 2018 18:42:01 (EDT)
+ * DATE         :   Thu 03 Aug 2017 05:05:23 PM EDT
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
- *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ *========================================================================
  */
-precision highp float;
+precision highp float; precision highp int;
 
-uniform float       timeWindow, dt;
-uniform sampler2D   inTtex ;
+/*========================================================================
+ * Interface Variables
+ *========================================================================
+ */
+uniform float       minValue ;
+uniform float       maxValue ;
+uniform vec3        tiptColor ;
+uniform float       tiptThickness ;     
+uniform vec4        minColor, maxColor ;
+uniform bool        enableMaxColor, enableMinColor ;
 
-layout (location = 0 ) out vec4 outTtex ;
+uniform sampler2D   phas ;
+uniform sampler2D   map ;
+uniform sampler2D   tipt ;
+uniform sampler2D   clrm ;
+uniform sampler2D   prob ;
+uniform vec4        channelMultiplier ;
+uniform vec3        phaseColor ;
+in  vec2            pixPos ;
+out vec4            FragColor ;
 
-void main(){
-    float t = texture( inTtex, vec2(0.5)).r ;
-    t += dt ;
-    if ( t>timeWindow ){
-        t = 0. ;
+/*=========================================================================
+ * Hyperbolic Tangent
+ *=========================================================================
+ */
+float Tanh(float x){
+    if ( x<-3.0){
+        return -1.0 ;
+    } else if (x>3.0){
+        return 1.0 ;
+    } else {
+        return x*(27.0 + x*x)/(27.0+9.0*x*x) ;
     }
-    outTtex = vec4(t) ;
+}
 
-    return ;
+/*=========================================================================
+ * Main body of Display Fragment Shader 
+ *=========================================================================
+ */
+void main()
+{
+    float   isTipt ;
+    float   r, gamma;
+    vec4    t = texture(map,pixPos);
+    vec4    phase = texture( phas, pixPos ) ;
+    
+    vec2 size   = vec2(textureSize(map,0)) ;
+    vec2 ii = vec2(1.,0.)/size ;
+    vec2 jj = vec2(0.,1.)/size ;
+
+    
+    isTipt = texture(tipt, pixPos).a ;
+    
+    isTipt = max(isTipt, texture(tipt, pixPos+ii            ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos+ii+jj         ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos+jj            ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos-ii            ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos-ii-jj         ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos-jj            ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos+ii-jj         ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos-ii+jj         ).a ) ;
+
+    r = dot(t, channelMultiplier) ;
+    r = (r-minValue)/(maxValue-minValue) ;
+
+    vec4 pixColor   = texture(  clrm, vec2(r,0.5)   ) ;
+    vec4 probColor  = texture(  prob, pixPos        )  ;
+
+    if ( enableMinColor ) if (r < 0.) pixColor = minColor ;
+    if ( enableMaxColor ) if (r >1.) pixColor = maxColor ;
+
+    if ( phase.r > .98 ){
+        FragColor    = mix(mix(pixColor, vec4(tiptColor,1.0),isTipt), probColor, probColor.a) ;
+    }else{
+        FragColor    = vec4(phaseColor,1.) ;
+    }
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * dispBackgroundPhasShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var dispBackgroundPhasShader = { value : `#version 300 es
+/*========================================================================
+ * dispBackgroundPhasShader 
+ *
+ * PROGRAMMER   :   ABOUZAR KABOUDIAN
+ * DATE         :   Thu 03 Aug 2017 05:05:23 PM EDT
+ * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
+ *========================================================================
+ */
+precision highp float; precision highp int;
+
+/*========================================================================
+ * Interface Variables
+ *========================================================================
+ */
+uniform float       minValue ;
+uniform float       maxValue ;
+uniform vec3        tiptColor ;
+uniform float       tiptThickness ;     
+uniform vec4        minColor, maxColor ;
+uniform bool        enableMaxColor, enableMinColor ;
+
+uniform sampler2D   phas ;
+uniform sampler2D   background ;
+uniform sampler2D   map ;
+uniform sampler2D   tipt ;
+uniform sampler2D   clrm ;
+uniform sampler2D   prob ;
+uniform vec4        channelMultiplier ;
+uniform vec3        phaseColor ;
+in  vec2            pixPos ;
+out vec4            FragColor ;
+
+/*=========================================================================
+ * Hyperbolic Tangent
+ *=========================================================================
+ */
+float Tanh(float x){
+    if ( x<-3.0){
+        return -1.0 ;
+    } else if (x>3.0){
+        return 1.0 ;
+    } else {
+        return x*(27.0 + x*x)/(27.0+9.0*x*x) ;
+    }
+}
+
+/*=========================================================================
+ * Main body of Display Fragment Shader 
+ *=========================================================================
+ */
+void main()
+{
+    float   isTipt ;
+    float   r, gamma;
+    vec4    t = texture(map,pixPos);
+    vec4    phase = texture( phas, pixPos ) ;
+    
+    vec2 size   = vec2(textureSize(map,0)) ;
+    vec2 ii = vec2(1.,0.)/size ;
+    vec2 jj = vec2(0.,1.)/size ;
+
+    
+    isTipt = texture(tipt, pixPos).a ;
+    
+    isTipt = max(isTipt, texture(tipt, pixPos+ii            ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos+ii+jj         ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos+jj            ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos-ii            ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos-ii-jj         ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos-jj            ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos+ii-jj         ).a ) ;
+    isTipt = max(isTipt, texture(tipt, pixPos-ii+jj         ).a ) ;
+
+    r = dot(t, channelMultiplier) ;
+    r = (r-minValue)/(maxValue-minValue) ;
+
+    vec4 pixColor   = texture(  clrm, vec2(r,0.5)   ) ;
+    vec4 probColor  = texture(  prob, pixPos        )  ;
+
+    if ( enableMinColor ) if (r < 0.) pixColor = minColor ;
+    if ( enableMaxColor ) if (r >1.) pixColor = maxColor ;
+
+    if ( phase.r > .98 ){
+        FragColor    = mix(mix(pixColor, vec4(tiptColor,1.0),isTipt), probColor, probColor.a) ;
+    }else{
+        FragColor    = vec4(phaseColor,1.) ;
+        r = 0.0 ;
+    }
+
+    vec4 backgroundColor = texture(background, pixPos ) ;
+    FragColor = mix(backgroundColor,FragColor, r) ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * dispShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var dispShader = { value : `#version 300 es
+/*========================================================================
+ * dispShader 
+ *
+ * PROGRAMMER   :   ABOUZAR KABOUDIAN
+ * DATE         :   Thu 03 Aug 2017 05:05:29 PM EDT
+ * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
+ *========================================================================
+ */
+precision highp float; precision highp int;
+
+/*========================================================================
+ * Interface Variables
+ *========================================================================
+ */
+uniform float       minValue ;
+uniform float       maxValue ;
+uniform vec3        tiptColor ;
+uniform vec4        minColor, maxColor ;
+uniform bool        enableMaxColor, enableMinColor ;
+uniform float       tiptThickness ;                                                      
+uniform sampler2D   map ;
+uniform sampler2D   tipt ;
+uniform sampler2D   clrm ;
+uniform sampler2D   prob ;
+uniform vec4        channelMultiplier ;
+
+in  vec2            pixPos ;
+out vec4            FragColor ;
+
+/*=========================================================================
+ * Hyperbolic Tangent
+ *=========================================================================
+ */
+float Tanh(float x){
+    if ( x<-3.0){
+        return -1.0 ;
+    } else if (x>3.0){
+        return 1.0 ;
+    } else {
+        return x*(27.0 + x*x)/(27.0+9.0*x*x) ;
+    }
+}
+
+/*=========================================================================
+ * Main body of Display Fragment Shader 
+ *=========================================================================
+ */
+void main()
+{
+    float   isTipt ;
+    float   r, gamma;
+    vec4    t = texture(map,pixPos);
+    
+    vec2 size   = vec2(textureSize(map,0)) ;
+    vec2 ii = vec2(1.,0.)/size ;
+    vec2 jj = vec2(0.,1.)/size ;
+    
+    isTipt = texture(tipt, pixPos).a ;
+    for(float i=-0.5*tiptThickness ; i<(tiptThickness*0.5) ; i++){
+        for(float j=-0.5*tiptThickness ; j<(tiptThickness*0.5) ; j++){
+            isTipt = max(isTipt, texture(tipt, pixPos + ii*i).a) ;
+            isTipt = max(isTipt, texture(tipt, pixPos + jj*j).a) ;
+            isTipt = max(isTipt, texture(tipt, pixPos + ii*i + jj*j).a) ;
+        }
+    }
+
+    r = dot(t, channelMultiplier) ;
+    r = (r-minValue)/(maxValue-minValue) ;
+
+
+    vec4 pixColor   = texture(  clrm, vec2(r,0.5)   ) ;
+
+    if ( enableMinColor ) if (r < 0.) pixColor = minColor ;
+    if ( enableMaxColor ) if (r >1.) pixColor = maxColor ;
+
+    vec4 probColor  = texture(  prob, pixPos        )  ;
+    FragColor    = mix(mix(pixColor, vec4(tiptColor,1.0),isTipt), probColor, probColor.a) ;
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -10519,38 +10429,34 @@ void main(){
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * vertShader
+ * tstpShader
  *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
  */
-var vertShader = { value : `#version 300 es
-/*========================================================================
- * vertShader   :  Default Vertex Shader
+var tstpShader = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * tstpShader   :   time step shader
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 05:07:21 PM EDT
+ * DATE         :   Wed 26 Sep 2018 18:42:01 (EDT)
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
- *========================================================================
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
-precision highp float; precision highp int;
+precision highp float;
 
-/*========================================================================
- * Interface variables
- *========================================================================
- */
-in  vec3 position;
+uniform float       timeWindow, dt;
+uniform sampler2D   inTtex ;
 
-out vec2 pixPos ;
-out vec3 pixCrd ;
+layout (location = 0 ) out vec4 outTtex ;
 
-/*=========================================================================
- * Main body of the vertex shader
- *=========================================================================
- */
-void main()
-{   
-    pixPos = position.xy ;
-    pixCrd = position.xyz ;
-    gl_Position = vec4(position.x*2.-1., position.y*2.-1.,0.,1.0);
+void main(){
+    float t = texture( inTtex, vec2(0.5)).r ;
+    t += dt ;
+    if ( t>timeWindow ){
+        t = 0. ;
+    }
+    outTtex = vec4(t) ;
+
+    return ;
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -11741,35 +11647,129 @@ void main( void ) {
 }` } ;
 
 /*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
- * wA2bShader
+ * filamentShader
  *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
  */
-var wA2bShader = { value : `#version 300 es
-
-/*========================================================================
- * wA2bShader   :  BUFFER SWAP FRAGMENT SHADER  
+var filamentShader = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * filamentShader:  calculating  the filament
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
- * DATE         :   Thu 03 Aug 2017 05:07:29 PM EDT
+ * DATE         :   Fri 15 Jun 2018 16:54:56 (EDT) 
  * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
- *========================================================================
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
-precision highp float; precision highp int;
+precision highp float;
+precision highp int ;
+
+/*------------------------------------------------------------------------
+ * Interface variables
+ *------------------------------------------------------------------------
+ */
+in vec2     pixPos ;
+
+uniform sampler2D   inFtrgt, inStrgt ;
+uniform sampler2D   crdtMap ;
+
+uniform float       filamentThickness ;
+
+uniform vec3        domainResolution ;
+uniform float       mx, my ;
+uniform float       filamentThreshold ;
+uniform float       filamentBorder ;
+
+layout (location = 0 ) out vec4 outTrgt ;
 
 /*========================================================================
- * Interface Variables
+ * Texture3D
  *========================================================================
  */
-uniform sampler2D   map ;
-in      vec2        pixPos ;
-layout (location = 0 ) out     vec4        FragColor ;
-/*=========================================================================
- * Main body of Buffer Swap Shader 
- *=========================================================================
- */
-void main()
+vec4 Texture3D( sampler2D S, vec3 texCoord )
 {
-    FragColor = texture(map,pixPos) ;
+    vec4    vColor1, vColor2 ;
+    float   x, y ;
+    float   wd = mx*my - 1.0 ;
+
+    float zSliceNo  = floor( texCoord.z*mx*my) ;
+
+    x = texCoord.x / mx ;
+    y = texCoord.y / my ;
+
+    x += (mod(zSliceNo,mx)/mx) ;
+    y += floor((wd-zSliceNo)/ mx )/my ;
+
+    vColor1 = texture( S,  vec2(x,y) ) ;
+
+    zSliceNo = ceil( texCoord.z*mx*my   ) ;
+
+    x = texCoord.x / mx ;
+    y = texCoord.y / my ;
+
+    x += (mod(zSliceNo,mx)/mx) ;
+    y += floor((wd-zSliceNo)/ mx )/my ;
+    vColor2 = texture( S,  vec2(x,y) ) ;
+
+    return mix(
+        vColor2,
+        vColor1,
+        zSliceNo/(mx*my)-texCoord.z
+    ) ;
+}
+
+/*========================================================================
+ * isFilament
+ *========================================================================
+ */
+bool isFilament( sampler2D S1, sampler2D S2, vec3 pos, vec3 ii ){
+    float s1 = 0. ;
+    float s2 = 0. ;
+
+    float f,v,d ;
+    vec3 cc ;
+    for (float i=0. ; i < 2. ; i++){
+        for (float j=0. ; j<2. ;j++){
+            for(float k=0. ; k<2. ; k++){
+                cc=  pos + vec3(i,j,k)*ii ;
+                v = Texture3D( S1, cc).r ;
+                f = v - filamentThreshold ;
+                d = v - Texture3D( S2, cc).r ;
+                s1 += step(0.,f) ;
+                s2 += step(0.,d) ;
+            }
+        }
+    }
+
+    bool b1 = ((s1>0.5) && (s1<7.5)) ;
+    bool b2 = ((s2>0.5) && (s2<7.5)) ;
+
+    return (b1 && b2) ;
+}
+
+/*========================================================================
+ * main body of the filament shader
+ *========================================================================
+ */
+void main(){ 
+    bool s = false ;
+    vec3 ii = vec3(1.)/domainResolution ;
+    vec3 pos = texture( crdtMap, pixPos ).rgb ;
+
+    float upperVal = 1.-filamentBorder ;
+    float lowerVal = filamentBorder ;
+
+    
+    if (    pos.x<lowerVal ||   pos.x>upperVal || pos.y<lowerVal ||   
+            pos.y>upperVal ||   pos.z<lowerVal || pos.z>upperVal    ){
+        outTrgt = vec4(0.) ;
+        return ;
+    }
+
+    for (float i=-filamentThickness ; i < 1. ; i++)
+      for (float j=-filamentThickness ; j < 1. ; j++)
+        for (float k=-filamentThickness ; k < 1. ; k++)
+          s = s || isFilament( inFtrgt, inStrgt, pos+vec3(i,j,k)*ii, ii) ;
+
+    outTrgt = (s) ? vec4(1.):vec4(0.) ;
 }` } ;
 
 
@@ -12731,8 +12731,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.12' ;
-var updateTime = 'Thu 02 Sep 2021 10:12:27 (EDT)' ;
+var version = 'v6.8.13' ;
+var updateTime = 'Thu 02 Sep 2021 15:10:43 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work

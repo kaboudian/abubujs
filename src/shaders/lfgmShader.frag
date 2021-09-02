@@ -1,6 +1,6 @@
 #version 300 es
 /*========================================================================
- * lfgmShader   :  Fragmet Shader for Creating Plots
+ * lfgmShader   :   Fragmet Shader for Creating Line/Curve Plots
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
  * DATE         :   Thu 03 Aug 2017 05:06:02 PM EDT

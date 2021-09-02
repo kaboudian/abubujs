@@ -1,6 +1,6 @@
 #version 300 es
 /*========================================================================
- * lpvtShader   : Shader for Creating Plots
+ * lpvtShader   :   Vertex Shader for Creating Line/Curve Plots
  *
  * PROGRAMMER   :   ABOUZAR KABOUDIAN
  * DATE         :   Thu 03 Aug 2017 05:06:21 PM EDT
