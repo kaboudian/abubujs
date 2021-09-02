@@ -1,7 +1,8 @@
 all : shaders.js
 
 shaders.js : .PHONY
-	./shaders2js.sh
+	php shaders2js.php > shaders.js
+#	./shaders2js.sh
 .PHONY:
 	
 clean:

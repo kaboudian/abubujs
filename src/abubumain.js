@@ -1,5 +1,5 @@
-var version = 'v6.8.11' ;
-var updateTime = 'Mon 30 Aug 2021 13:40:05 (EDT)' ;
+var version = 'v6.8.12' ;
+var updateTime = 'Thu 02 Sep 2021 10:12:27 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -181,23 +181,23 @@ function OrbitalCameraControl ( mViewMatrix,
 
     this._init = function() {
         this._listenerTarget.addEventListener('mousedown',
-                (e) => this._onDown(e));
+                (e) => this._onDown(e), { passive: false});
         this._listenerTarget.addEventListener('mouseup',
-                () => this._onUp());
+                () => this._onUp(), { passive: false});
         this._listenerTarget.addEventListener('mousemove',
-                (e) => this._onMove(e));
+                (e) => this._onMove(e), { passive: false});
 
         this._listenerTarget.addEventListener('touchstart',
-                (e) => this._onDown(e));
+                (e) => this._onDown(e), { passive: false});
         this._listenerTarget.addEventListener('touchend',
-                () => this._onUp());
+                () => this._onUp(), { passive: false});
         this._listenerTarget.addEventListener('touchmove',
-                (e) => this._onMove(e));
+                (e) => this._onMove(e), { passive: false});
 
         this._listenerTarget.addEventListener('mousewheel',
-                (e) => this._onWheel(e));
+                (e) => this._onWheel(e), { passive: false});
         this._listenerTarget.addEventListener('DOMMouseScroll',
-                (e) => this._onWheel(e));
+                (e) => this._onWheel(e), { passive: false});
     }
 
     this._init();

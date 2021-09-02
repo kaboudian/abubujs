@@ -9458,6 +9458,10 @@ var forEach = exports.forEach = function () {
 
 var Abubu = new function(){
 
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * DefaultVertexShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var DefaultVertexShader = { value : `#version 300 es
 /*========================================================================
  * vertShader   :  Default Vertex Shader
@@ -9494,8 +9498,10 @@ void main()
     gl_Position = vec4(position.xy*2.-vec2(1.),0.,1.0);
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * bgndShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var bgndShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * bgndShader   :   COLOR BACGROUNDS
@@ -9527,8 +9533,10 @@ void main()
     FragColor = mix(vec4(color,1.0),crvc, crvc.a ) ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * dispBackgroundPhasShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var dispBackgroundPhasShader = { value : `#version 300 es
 /*========================================================================
  * dispBackgroundPhasShader 
@@ -9623,8 +9631,10 @@ void main()
     FragColor = mix(backgroundColor,FragColor, r) ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * dispPhasShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var dispPhasShader = { value : `#version 300 es
 /*========================================================================
  * dispPhasShader 
@@ -9714,8 +9724,10 @@ void main()
     }
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * dispShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var dispShader = { value : `#version 300 es
 /*========================================================================
  * dispShader 
@@ -9796,8 +9808,10 @@ void main()
     FragColor    = mix(mix(pixColor, vec4(tiptColor,1.0),isTipt), probColor, probColor.a) ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * filamentShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var filamentShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * filamentShader:  calculating  the filament
@@ -9920,8 +9934,10 @@ void main(){
     outTrgt = (s) ? vec4(1.):vec4(0.) ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * histShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var histShader = { value : `#version 300 es
 /*========================================================================
  * histShader
@@ -9967,8 +9983,10 @@ void main()
     FragColor = fragColor;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * ipltShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var ipltShader = { value : `#version 300 es
 /*========================================================================
  * ipltShader   : Fragmet Shader for Initializing Plots
@@ -10001,8 +10019,10 @@ void main()
     FragColor2 = vec4(r,r,r,1.0) ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * lfgmShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var lfgmShader = { value : `#version 300 es
 /*========================================================================
  * lfgmShader   :  Fragmet Shader for Creating Plots
@@ -10031,8 +10051,10 @@ void main()
     FragColor = vec4(color,visible);
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * lpvtShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var lpvtShader = { value : `#version 300 es
 /*========================================================================
  * lpvtShader   : Shader for Creating Plots
@@ -10073,8 +10095,10 @@ void main()
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * lvtxShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var lvtxShader = { value : `#version 300 es
 /*========================================================================
  * lvtxShader   : Shader for Creating Triangulated Signal Plots
@@ -10143,8 +10167,10 @@ void main() {
     gl_Position = vec4(vertCrds[ vertexID ] , 0., 1.);
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * phaseDisplay
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var phaseDisplay = { value : `#version 300 es 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * phaseDisplay.frag : displays the phase values on the screen
@@ -10182,8 +10208,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * phaseInit
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var phaseInit = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * phaseInit.frag : initial the phase textures for the PhasePlot
@@ -10205,8 +10233,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * phaseUpdate
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var phaseUpdate = { value : `#version 300 es 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * phaseUpdate.frag : updates the phase value of at the probe location
@@ -10269,8 +10299,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * sctwShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var sctwShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * sctwShader   :  scales the time window
@@ -10299,8 +10331,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * tiptInitShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var tiptInitShader = { value : `#version 300 es
 
 /*========================================================================
@@ -10330,8 +10364,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * tiptShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var tiptShader = { value : `#version 300 es
 /*========================================================================
  * tiptShader 
@@ -10412,8 +10448,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * tstpShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var tstpShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * tstpShader   :   time step shader
@@ -10441,8 +10479,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * tvsxShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var tvsxShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * tvsxShader   :   create a time vs x graph
@@ -10478,8 +10518,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vertShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vertShader = { value : `#version 300 es
 /*========================================================================
  * vertShader   :  Default Vertex Shader
@@ -10511,8 +10553,10 @@ void main()
     gl_Position = vec4(position.x*2.-1., position.y*2.-1.,0.,1.0);
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrc1FShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrc1FShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrc1FShader  :   First Pass of Volume Ray Casting
@@ -10541,8 +10585,10 @@ void main()
     back_face_Crds = vec4(   worldSpaceCoords, 1.0   ) ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrc1VShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrc1VShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrc1VShader  :   1st Pass Vertex Shader of Volume-Ray-Casting
@@ -10578,8 +10624,10 @@ void main()
     gl_Position = projectionMatrix*viewMatrix*modelMatrix*vec4( position, 1.0 );
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrc2FShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrc2FShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrc2FShader  :   2nd Pass Fragment Shader for Volume-Ray-Casting
@@ -11072,8 +11120,10 @@ void main( void ) {
     }
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrc2VShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrc2VShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrc2VShader  :   2nd Pass Vertex Shader for Volume-Ray-Casting
@@ -11114,8 +11164,10 @@ void main()
     gl_Position = projectedCoords ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrcClickCrdShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrcClickCrdShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrcClickCrdShader   :   shades the click coordinate
@@ -11143,8 +11195,10 @@ void main(){
     clickCoordinates = texture( projectedCrds , clickPosition ) ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrcClickVoxelCrdShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrcClickVoxelCrdShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrcClickVoxelCrdShader.frag 
@@ -11194,8 +11248,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrcCrdShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrcCrdShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrcCrdShader :   calculates the coordinate of each point in 3d
@@ -11235,8 +11291,10 @@ void main(){
     crd.z = sliceNo/(mx*my) ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrcFrmShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrcFrmShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrcFrmShader :   colors an object to a particular color
@@ -11270,8 +11328,10 @@ void main(){
     return ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrcLgtShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrcLgtShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrcLgtShader :   shading the light on the structure
@@ -11495,8 +11555,10 @@ void main(){
     light = (light+lightShift)/(1.+lightShift) ;
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vrcPCShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var vrcPCShader = { value : `#version 300 es
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * vrcPCShader  :   Volume-Ray-Casting Projected Coordinate Shader
@@ -11678,8 +11740,10 @@ void main( void ) {
     }
 }` } ;
 
-
-
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * wA2bShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
 var wA2bShader = { value : `#version 300 es
 
 /*========================================================================
@@ -11707,8 +11771,6 @@ void main()
 {
     FragColor = texture(map,pixPos) ;
 }` } ;
-
-
 
 
 function getColormapList(){
@@ -12669,8 +12731,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.11' ;
-var updateTime = 'Mon 30 Aug 2021 13:40:05 (EDT)' ;
+var version = 'v6.8.12' ;
+var updateTime = 'Thu 02 Sep 2021 10:12:27 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -12852,23 +12914,23 @@ function OrbitalCameraControl ( mViewMatrix,
 
     this._init = function() {
         this._listenerTarget.addEventListener('mousedown',
-                (e) => this._onDown(e));
+                (e) => this._onDown(e), { passive: false});
         this._listenerTarget.addEventListener('mouseup',
-                () => this._onUp());
+                () => this._onUp(), { passive: false});
         this._listenerTarget.addEventListener('mousemove',
-                (e) => this._onMove(e));
+                (e) => this._onMove(e), { passive: false});
 
         this._listenerTarget.addEventListener('touchstart',
-                (e) => this._onDown(e));
+                (e) => this._onDown(e), { passive: false});
         this._listenerTarget.addEventListener('touchend',
-                () => this._onUp());
+                () => this._onUp(), { passive: false});
         this._listenerTarget.addEventListener('touchmove',
-                (e) => this._onMove(e));
+                (e) => this._onMove(e), { passive: false});
 
         this._listenerTarget.addEventListener('mousewheel',
-                (e) => this._onWheel(e));
+                (e) => this._onWheel(e), { passive: false});
         this._listenerTarget.addEventListener('DOMMouseScroll',
-                (e) => this._onWheel(e));
+                (e) => this._onWheel(e), { passive: false});
     }
 
     this._init();

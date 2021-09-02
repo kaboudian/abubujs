@@ -1,2 +1,2 @@
 #!/bin/bash
-gvim src/abubumain.js src/abubuhead.js src/abubutail.js maker.sh src/shaders/*.frag src/shaders/*.vert
+gvim src/abubumain.js src/abubuhead.js src/abubutail.js maker.sh src/shaders/*.*
