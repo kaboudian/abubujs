@@ -1,5 +1,5 @@
-var version = 'v6.8.13' ;
-var updateTime = 'Thu 02 Sep 2021 15:10:43 (EDT)' ;
+var version = 'v6.8.14' ;
+var updateTime = 'Fri 03 Sep 2021 17:17:15 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -629,7 +629,6 @@ class Texture{
         this.texture    = gl.createTexture() ;
         this._width      = w ;
         this._height     = h ;
-
         this._internalFormat = readOption( iformat, 'rgba32f' ,
                 'No internal format provided, assuming RBGA32F' ) ;
         this._format = readOption( format , 'rgba',
@@ -1059,6 +1058,156 @@ class CanvasTexture extends Float32Texture{
     }
 }
         
+/*========================================================================
+ * DepthTexture
+ *========================================================================
+ */
+class DepthTexture{
+    constructor( w, h , o ){
+        this.gl             = cgl.gl ;
+        this.texture        = gl.createTexture() ;
+
+        this._width         = w ;
+        this._height        = h ;
+
+        this._level         = o?.level          ?? 0  ;
+        this._internalFormat= o?.internalFormat ?? 'DEPTH_COMPONENT24' ;
+        this._format        = o?.format         ?? 'DEPTH_COMPONENT' ;
+        this._type          = o?.type           ?? 'UNSIGNED_INT' ;
+        this._border        = o?.border         ?? 0 ;
+        this._data          = o?.data           ?? null ;
+        
+        this._wrapS         = o?.wrapS          ?? 'CLAMP_TO_EDGE' ;
+        this._wrapT         = o?.wrapS          ?? 'CLAMP_TO_EDGE' ;
+
+        this._minFilter     = o?.minFilter      ?? 'NEAREST' ;
+        this._magFilter     = o?.minFilter      ?? 'NEAREST' ;
+        
+        this.bind() ;
+
+        this.init() ;
+        this.setFilters() ;
+
+    } // end of costructor -----------------------------------------------
+
+/*------------------------------------------------------------------------
+ * getters
+ *------------------------------------------------------------------------
+ */
+    get width(){            return this._width ;                }
+    get height(){           return this._height ;               }
+    get level(){            return this._level ;                } 
+    get internalFormat(){   return this._internalFormat ;       }
+    get format(){           return this._format ;               } 
+    get type(){             return this._type ;                 }
+    get border(){           return this._border ;               }
+    get data(){             return this._data ;                 }
+    get wrapS(){            return this._wrapS ;                }
+    get wrapT(){            return this._wrapT ;                }
+    get minFilter(){        return this._minFilter ;            }
+    get magFilter(){        return this._magFilter ;            }
+
+/*------------------------------------------------------------------------   
+ * setters
+ *------------------------------------------------------------------------
+ */
+    // width .............................................................
+    set width(w){
+        this._width = w ?? this._width ;
+        this.init() ;
+    }
+    // height ............................................................
+    set height(h){
+        this._height = h ?? this._height ;
+        this.init() ;
+    }
+    // level .............................................................
+    set level(l){
+        this._level = l ?? this._level ;
+        this.init() ;
+    }
+    // internalFormat ....................................................
+    set internalFormat( intf ){
+        this._internalFormat = intf ;
+        this.init() ;
+    }
+    // format ............................................................
+    set format(frmt){
+        this._format = frmt ;
+        this.init() ;
+    }
+    // type ..............................................................
+    set type(nt){
+        this._type = nt ;
+        this.init() ;
+    }
+    // border ............................................................
+    set border(nb){
+        this._border = nb ;
+        this.init() ;
+    }
+    // data ..............................................................
+    set data(nd){
+        this._data = nd ;
+        this.init() ;
+    }
+    // wrapS .............................................................
+    set wrapS(nw){
+        this._wrapS = nw ;
+        this.setFilters() ;
+    }
+    // wrapT .............................................................
+    set wrapT(nw){
+        this._wrapT = nw ;
+        this.setFilters() ;
+    }
+    // minFilter .........................................................
+    set minFilter(nf){
+        this._minFilter = nf ;
+        this.setFilters() ;
+    }
+    // magFilter .........................................................
+    set magFilter(nf){
+        this._magFilter = nf ;
+        this.setFilters() ;
+    }
+
+/*------------------------------------------------------------------------
+ * methods
+ *------------------------------------------------------------------------
+ */
+    // bind ..............................................................
+    bind(){
+        gl.bindTexture( gl.TEXTURE_2D, this.texture) ;
+    }
+    // unbind ............................................................
+    unbind(){
+        gl.bindTexture( gl.TEXTURE_2D, null ) ;
+    }
+    // setFilters ........................................................
+    setFilters(){
+        this.bind() ;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, GL(this.minFilter));
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, GL(this.magFilter));
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, GL(this.wrapS));
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, GL(this.wrapT));
+        this.unbind() ;
+    }
+    // init ..............................................................
+    init(){
+        this.bind() ;
+        gl.texImage2D(gl.TEXTURE_2D, this.level,GL(this.internalFormat), 
+                this.width, this.height, this.border , GL(this.format) ,
+                GL(this.type) , this.data ) ;
+        this.unbind();
+    }
+    // use ...............................................................
+    use(){
+        gl.framebufferTexture2D(    
+                gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, 
+                gl.TEXTURE_2D, this.texture, this.level     );
+    }
+} /* End of DepthTexture */
 
 /*========================================================================
  * CanvasTexture( canvas )
@@ -2734,6 +2883,13 @@ class Solver{
             this.geometry.premitive = 'TRIANGLE_STRIP' ;
             this.geometry.width = 1 ;
         }
+
+/*------------------------------------------------------------------------
+ * depthTexture 
+ *------------------------------------------------------------------------
+ */
+        this.depthTexture = options?.depthTexture ?? null ;
+
 /*------------------------------------------------------------------------
  * draw
  *------------------------------------------------------------------------
@@ -2989,6 +3145,7 @@ class Solver{
         this.useProgram() ;
         if ( this.depthTest ){
             gl.enable(gl.DEPTH_TEST);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         }else{
             gl.disable(gl.DEPTH_TEST) ;
         }
@@ -3083,16 +3240,18 @@ class Solver{
                 gl.clear(gl.COLOR_BUFFER_BIT);
             }
         }else{
-            gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.framebuffer ) ;
+            gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, 
+                    this.framebuffer ) ;
+
+            if(this.depthTexture){
+                this.depthTexture.use() ;
+            }
             gl.drawBuffers(this.drawBuffers) ;
         }
         gl.bindVertexArray(this.vao) ;
         gl.lineWidth(   this.geometry.width) ;
 
         this.draw.render() ;
-        //gl.drawArrays(  this.geometry.premitive ,
-        //                this.geometry.offset ,
-        //                this.geometry.noVertices    );
 
         if ( this.canvasTarget ){
             if (this.clearColor){
@@ -11186,6 +11345,8 @@ this.ImageTexture        = ImageTexture ;
 this.TableTexture        = TableTexture ;
 this.CanvasTexture       = CanvasTexture ;
 this.LegacyCanvasTexture = LegacyCanvasTexture ;
+
+this.DepthTexture        = DepthTexture ;
 
 this.Float32TextureTableBond         = Float32TextureTableBond ;
 
