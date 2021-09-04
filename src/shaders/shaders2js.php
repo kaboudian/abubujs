@@ -1,5 +1,6 @@
 <?php
     include 'shader.php' ;
+    $dir = __dir__ . "/" ;
 
     // General ...........................................................
     shader2var('DefaultVertexShader'        ) ;
@@ -36,15 +37,30 @@
     shader2var('tstpShader'                 ) ;
 
     // volume ray-caster .................................................
-    shader2var('vrc1FShader'             , __dir__ . "/vrc/"   ) ;
-    shader2var('vrc1VShader'             , __dir__ . "/vrc/"   ) ;
-    shader2var('vrc2FShader'             , __dir__ . "/vrc/"   ) ;
-    shader2var('vrc2VShader'             , __dir__ . "/vrc/"   ) ;
-    shader2var('vrcClickCrdShader'       , __dir__ . "/vrc/"   ) ;
-    shader2var('vrcClickVoxelCrdShader'  , __dir__ . "/vrc/"   ) ;
-    shader2var('vrcCrdShader'            , __dir__ . "/vrc/"   ) ;
-    shader2var('vrcFrmShader'            , __dir__ . "/vrc/"   ) ;
-    shader2var('vrcLgtShader'            , __dir__ . "/vrc/"   ) ;
-    shader2var('vrcPCShader'             , __dir__ . "/vrc/"   ) ;
-    shader2var('filamentShader'          , __dir__ . "/vrc/"   ) ;
+
+    shader2var('vrc1FShader'             , $dir . "vrc/"   ) ;
+    shader2var('vrc1VShader'             , $dir . "vrc/"   ) ;
+    shader2var('vrc2FShader'             , $dir . "vrc/"   ) ;
+    shader2var('vrc2VShader'             , $dir . "vrc/"   ) ;
+    shader2var('vrcClickCrdShader'       , $dir . "vrc/"   ) ;
+    shader2var('vrcClickVoxelCrdShader'  , $dir . "vrc/"   ) ;
+    shader2var('vrcCrdShader'            , $dir . "vrc/"   ) ;
+    shader2var('vrcFrmShader'            , $dir . "vrc/"   ) ;
+    shader2var('vrcLgtShader'            , $dir . "vrc/"   ) ;
+    shader2var('vrcPCShader'             , $dir . "vrc/"   ) ;
+    shader2var('filamentShader'          , $dir . "vrc/"   ) ;
+
+
+    // StructureFromJSON .................................................
+    shader2var( 'compressedCoordinator' , $dir . "StructureFromJSON/"   ) ;
+    shader2var( 'fullCoordinator'       , $dir . "StructureFromJSON/"   ) ;
+    shader2var( 'normals'               , $dir . "StructureFromJSON/"   ) ;
+
+    // SurfaceVisualizer .................................................
+    shader2var( 'vsurfaceView'          , $dir . "SurfaceVisualizer/"   ) ;
+    shader2var( 'fsurfaceView'          , $dir . "SurfaceVisualizer/"   ) ;
+    shader2var( 'fsurfaceViewBlend'     , $dir . "SurfaceVisualizer/"   ) ;
+    shader2var( 'fsurfaceViewCompressedClickPosition'     
+                                    , $dir . "SurfaceVisualizer/"   ) ;
+
 ?>

@@ -1,5 +1,5 @@
-var version = 'v6.8.14' ;
-var updateTime = 'Fri 03 Sep 2021 17:17:15 (EDT)' ;
+var version = 'v6.9.00' ;
+var updateTime = 'Sat 04 Sep 2021 18:54:47 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -8657,6 +8657,689 @@ class VolumeRayCaster{
         this.rrender() ;
     }
 }
+/*========================================================================
+ * StructureFromJSON
+ *========================================================================
+ */
+class StructureFromJSON{
+    constructor(data){
+        this._mx            = data?.mx ;
+        this._my            = data?.my ;
+        this._width         = data?.comp_width ;
+        this._height        = data?.comp_height ;
+        this._fwidth        = data?.full_width ;
+        this._fheight       = data?.full_height ;
+        this.boundaryFacets = data?.boundaryFacets ;
+
+        // full texel index ..............................................
+        this.fullTexelIndex 
+            = new Uint32Texture(this.width,this.height, 
+                {
+                    data : new Uint32Array(data.fullTexelIndex)
+                } 
+            ) ;
+
+        // compressed texel index ........................................
+        this.compressedTexelIndex = new Uint32Texture(
+                this.fullWidth,this.fullHeight, 
+                {
+                    data : new Uint32Array(data.compressedTexelIndex)
+                } 
+            ) ;
+
+        // full 3d coordinates ...........................................
+        this.full3dCrdt = 
+            new Float32Texture( this.fwidth, this.fheight ) ;
+        this.fullCoordinator = new Solver({
+            fragmentShader: fullCoordinator.value ,
+            uniforms : { 
+                mx : { type : 'f' , value : this.mx } ,
+                my : { type : 'f' , value : this.my } ,
+            } ,
+            targets : { 
+                crdt : { location : 0, target : this.full3dCrdt } ,
+            }
+        } ) ;
+        this.fullCoordinator.render() ;
+
+        // compressed 3d coordinates .....................................
+        this.compressed3dCrdt = 
+            new Float32Texture( this.width, this.height ) ;
+
+        this.compressedCoordinator = new Solver({
+            fragmentShader : compressedCoordinator.value ,
+            uniforms : {
+                fullTexelIndex : { type : 't', value : this.fullTexelIndex } ,
+                full3dCrdt     : { type : 't', value : this.full3dCrdt  } ,
+            } ,
+            targets : {
+               compressed3dCrdt : { location : 0, target : this.compressed3dCrdt }
+            }
+        } ) ;
+        this.compressedCoordinator.render() ;
+
+        // normals to the compressed surface .............................
+        this.normals = 
+            new Float32Texture( this.width, this.height ) ;
+
+        this.normalizer = new Solver({
+            fragmentShader : normals.value ,
+            uniforms : {
+                mx : { type : 'i', value : this.mx } ,
+                my : { type : 'i', value : this.my } ,
+                fullTexelIndex : 
+                    { type : 't', value : this.fullTexelIndex } ,
+                compressedTexelIndex :
+                    { type : 't', value : this.compressedTexelIndex } ,
+            } ,
+            targets : { 
+                normals : { location : 0, target : this.normals } 
+            }
+        } ) ;
+        this.normalizer.render() ;
+
+        return ;
+
+    } /* End of constructor */
+
+    // getters ...........................................................
+    get width(){            return this._width ;        }
+    get compWidth(){        return this._width ;        }
+    get compressedWidth(){  return this._width ;        }
+    get cwidth(){           return this._width ;        }
+    get compressed_width(){ return this._width ;        }
+    get comp_width(){       return this._width ;        }
+
+    get height(){           return this._height ;       }
+    get cheight(){          return this._height ;       }
+    get compHeight(){       return this._height ;       }
+    get compressedHeight(){ return this._height ;       }
+    get compressed_height(){return this._height ;       }
+    get comp_height(){      return this._height ;       }
+    
+    get fullWidth(){        return this._fwidth ;       }
+    get full_width(){       return this._fwidth ;       } 
+    get fwidth(){           return this._fwidth ;       } 
+    
+    get fullHeight(){       return this._fheight ;      } 
+    get full_height(){      return this._fheight ;      } 
+    get fheight(){          return this._fheight ;      } 
+    
+    get mx(){               return this._mx ;           }
+    get my(){               return this._my ;           }
+
+}
+
+/*========================================================================
+ * SurfaceVisualizer
+ *========================================================================
+ */
+class SurfaceVisualizer{
+
+/*------------------------------------------------------------------------
+ * constructor:
+ *------------------------------------------------------------------------
+ */
+    constructor(opts){
+        this._target            = opts?.input       ?? null ;
+        this._target            = opts?.target      ?? this.input ;
+        this._canvas            = opts?.canvas      ?? null ;
+        this._structure         = opts?.structure   ?? null ;
+
+        this._channel           = opts?.channel     ?? 'r'  ;
+
+        this._channelMultipliers = {
+            r : [ 1.,0.,0.,0. ] , 
+            g : [ 0.,1.,0.,0. ] ,
+            b : [ 0.,0.,1.,0. ] ,
+            a : [ 0.,0.,0.,1. ] } ;
+
+        this._channels          = Object.keys( this._channelMultipliers ) ;
+
+        this._minValue          = opts?.minValue    ?? 0. ;
+        this._maxValue          = opts?.maxValue    ?? 1. ;
+
+        this._rotation          = opts?.rotation    ?? [0.,0.,0.] ;
+        this._translation       = opts?.translation ?? [0.,0.,0.] ;
+        this._scaling           = opts?.scaling     ?? [1.,1.,1.] ;
+
+        // near and far end of view frustrum .............................
+        this._near              = opts?.near        ?? 0.01 ;
+        this._far               = opts?.far         ?? 100. ;
+
+        // vertical field of view in radians .............................
+        this._fovy              = opts?.fovy        ?? 1.0 ;
+
+        // aspect ration of the view frustrum (width/height) .............
+        this._aspect            = opts?.aspect      ?? 1.0 ;
+
+        // view properties (eye location, center of the view and up
+        // direction .....................................................
+        this._eye               = opts?.eye         ?? [0.,0.,-5] ;
+        this._center            = opts?.center      ?? [0,0,0] ;
+        this._up                = opts?.up          ?? [0.,1.,0] ;
+
+        this._colormap          = new Colormap() ;
+        
+        //this._colormap          = opts?.colormap    ?? 'rainbowHotSpring' ;
+
+        // lighting properties ...........................................
+        this._clearColor        = opts?.clearColor  ?? [1,1,1,1] ;
+        this._lightColor        = opts?.lightColor  ?? [1,1,1,1] ;
+        this._lightAmbientTerm  = opts?.lightAmbientTerm ?? 0. ;
+        this._lightSpecularTerm = opts?.lightSpecularTerm ?? 1. ;
+        this._lightDirection    = opts?.lightDirection ?? [0.6,0.25,-0.66];
+
+        // surface properties ............................................
+        this._shininess         = opts?.shininess   ?? 10.0 ;
+        this._materialColor     = opts?.materialColor ?? 
+            [.97,.97,0.97,1.] ;
+        this._materialAmbientTerm= opts?.materialAmbientTerm ?? 1.9 ;
+        this._materialSpecularTerm = opts?.materialSpecularTerm ?? 0.8 ;
+
+        // operational textures ..........................................
+        this.projectedCoordinates  
+            = new Float32Texture( this.width, this.height ) ;
+        this.projectedColors 
+            = new Float32Texture( this.width, this.height ) ;
+
+        this.depthTexture = new DepthTexture( this.width, this.height ) ;
+
+        this.surfaceViewTarget = new DrawTargets(
+                [ this.projectedColors, this.projectedCoordinates ] ) ;
+
+        this.compressedClickPosition = 
+            new Float32Texture(1,1, {pairable: true}) ;
+    
+        // normal, projection, and view matrices .........................
+        this.modelMatrix        = mat4.create() ;
+        this.projectionMatrix   = mat4.create() ;
+        this.viewMatrix         = mat4.create() ;
+        this.normalMatrix       = mat4.create() ;
+        
+        // initialize the matrices .......................................
+        this.initializeMatrices() ;
+
+        // setup the orbital camera controller ...........................
+        this.controller = new OrbitalCameraControl( this.viewMatrix,
+                5., this.canvas )  ;
+
+        // setup surface solver ..........................................
+        this.surfaceView = new Solver({
+            vertexShader    : vsurfaceView.value ,
+            fragmentShader  : fsurfaceView.value ,
+            uniforms : {
+                compressedTexelIndex : { type : 's',
+                    value : this.structure.compressedTexelIndex     } ,
+                compressed3dCrdt : { type : 's', 
+                    value : this.structure.compressed3dCrdt         } ,
+                normals : { 
+                    type : 't', value : this.structure.normals      } ,
+                
+                icolor : { 
+                    type : 't', value : this.input } ,
+
+                colormap : { type : 't', value : this.colormapTexture } ,
+
+                channelMultiplier : {     type : 'v4',
+                                        value : this.channelMultiplier } ,
+                minValue : { type : 'f', value : this.minValue      } ,
+                maxValue : { type : 'f', value : this.maxValue      } ,
+                
+                projectionMatrix : {
+                    type : 'mat4', value : this.projectionMatrix    } ,
+                modelMatrix     : { 
+                    type : 'mat4', value : this.modelMatrix         } ,
+                viewMatrix      : { 
+                    type : 'mat4', value : this.viewMatrix          } ,
+                normalMatrix    : { 
+                    type : 'mat4', value : this.normalMatrix        } ,
+                
+                shininess           : { 
+                    type : 'f',  value : this.shininess             } ,
+                lightColor          : { 
+                    type : 'v4', value : this.lightColor            } ,
+                lightAmbientTerm    : { 
+                    type : 'f',  value : this.lightAmbientTerm      } ,
+                lightSpecularTerm   : { 
+                    type : 'f',  value : this.lightSpecularTerm     } ,
+                lightDirection      : { 
+                    type : 'v3', value : this.lightDirection        } ,
+                materialColor : { 
+                    type : 'v4', value : this.materialColor         } ,
+                materialAmbientTerm : { 
+                    type : 'f',  value : this.materialAmbientTerm   }  , 
+                materialSpecularTerm: { 
+                    type : 'f', value : this.materialSpecularTerm   } ,
+            } ,
+            geometry : {} ,
+            draw : new DrawArrays( 'triangles', 0,this.drawCount) ,
+            depthTest :  true ,
+            depthTexture : this.depthTexture,
+            targets : {
+                projectedColors : { 
+                        location : 0, target : this.projectedColors     } ,
+                projectedCoordinates : {
+                        location : 1, target : this.projectedCoordinates} ,
+            } ,
+        } ) ;
+
+        // update the modelview matrices .................................
+        this.updateModelviewMatrices() ;
+
+        // vertex array object ...........................................
+        //let gl = gl ;
+        let prog = this.surfaceView.prog ;
+        
+        gl.useProgram( prog ) ;
+        this.vertexIndexLoc = gl.getAttribLocation( prog, 'indices' ) ;
+
+        this.vao = gl.createVertexArray() ;
+        gl.bindVertexArray(this.vao) ;
+
+        this.vertexIndexBuffer = gl.createBuffer() ;
+        gl.bindBuffer( gl.ARRAY_BUFFER, this.vertexIndexBuffer ) ;
+        gl.bufferData( gl.ARRAY_BUFFER,
+                new Float32Array( this.boundaryFacets.indices) ,
+                gl.STATIC_DRAW ) ;
+        gl.vertexAttribPointer(
+                this.vertexIndexLoc ,
+                2 ,         // number of items per vertex
+                gl.FLOAT ,  // type
+                false ,     // normalize
+                0 ,         // stride
+                0           // offset
+            ) ;
+
+        gl.enableVertexAttribArray( this.vertexIndexLoc) ;
+        gl.bindBuffer( gl.ARRAY_BUFFER, null ) ;
+        gl.bindVertexArray(null) ;
+
+        this.surfaceView.vao = this.vao ;
+
+        // surfaceViewBlend ..............................................
+        this.surfaceViewBlend = new Solver({
+            fragmentShader : fsurfaceViewBlend.value ,
+            uniforms : { 
+                projectedColors : { 
+                    type    : 't', 
+                    value   : this.projectedColors } ,
+            } ,
+            canvas : this.canvas ,
+        } ) ;
+
+        // surfaceViewCompressedClickPosition ............................
+        this.surfaceViewCompressedClickPosition = new Solver({
+            fragmentShader : fsurfaceViewCompressedClickPosition.value,
+            uniforms : { 
+                clickPosition : { type : 'v2', value : [0,0] } ,
+                projectedCoordinates : 
+                    { type : 't', value : this.projectedCoordinates } ,
+                compressedTexelIndex : 
+                    { type : 't', 
+                        value : this.structure.compressedTexelIndex } ,
+                mx : { type : 'i' , value : this.structure.mx } ,
+                my : { type : 'i' , value : this.structure.my } ,
+                cwidth : { type : 'f', value : this.structure.cwidth } ,
+                cheight: { type : 'f', value : this.structure.cheight } ,
+            } ,
+            targets : { 
+                compressedClickPosition : {
+                    location : 0, target : this.compressedClickPosition }
+            }
+        } ) ;
+
+
+        this.colormap = opts?.colormap ?? 'rainbowHotspring' ;
+    } // End of constructor ----------------------------------------------
+
+/*------------------------------------------------------------------------
+ * getters 
+ *------------------------------------------------------------------------
+ */
+    get input(){                return this._target                     }
+    get structure(){            return this._structure ;                } 
+    get canvas(){               return this._canvas ;                   }
+    get width(){                return this.canvas.width                } 
+    get height(){               return this.canvas.height               }
+    
+    get channel(){              return this._channel ;                  } 
+
+    get channelMultiplier(){ 
+        return this._channelMultipliers[this.channel] ;                 } 
+    
+    get minValue(){             return this._minValue ;                 } 
+    get maxValue(){             return this._maxValue ;                 } 
+    get colormap(){             return this._colormap.name ;            }
+    get colormaps(){            return this._colormap.list              } 
+    get colormapTexture(){      return this._colormap.texture ;         }
+    
+    get translation(){          return this._translation ;              } 
+    get rotation(){             return this._rotation ;                 }
+    get scaling(){              return this._scaling ;                  }
+
+    get near(){                 return this._near ;                     }
+    get far(){                  return this._far;                       }
+    get fovy(){                 return this._fovy ;                     }
+    get aspect(){               return this._aspect ;                   }
+
+    get eye(){                  return this._eye ;                      }
+    get center(){               return this._center ;                   }
+    get up(){                   return this._up ;                       }
+
+    get shininess(){            return this._shininess                  } 
+    get clearColor(){           return this._clearColor                 } 
+    get lightColor(){           return this._lightColor                 } 
+    get lightAmbientTerm(){     return this._lightAmbientTerm           }
+    get lightSpecularTerm(){    return this._lightSpecularTerm          }
+    get lightDirection(){       return this._lightDirection             }
+    get materialColor(){        return this._materialColor              }
+    get materialAmbientTerm(){  return this._materialAmbientTerm        }
+    get materialSpecularTerm(){ return this._materialSpecularTerm       }
+
+    get boundaryFacets(){       return this.structure.boundaryFacets    } 
+    get noTriangles(){          return this.boundaryFacets.noTriangles  } 
+    get drawCount(){            return this.boundaryFacets.noNodes      }
+
+    get vertexShader(){         
+        return this.surfaceView.vertexShader                     } 
+    get fragmentShader(){       
+        return this.surfaceView.fragmentShader                   }
+    
+
+/*------------------------------------------------------------------------
+ * setters
+ *------------------------------------------------------------------------
+ */
+    set input(nin){
+        this._target = nin ;
+        this.surfaceView.uniforms.icolor.value = this.input ;
+    }
+    set target(nt){
+        this.input = nt ;
+    }
+    set channel(nc){
+        this._channel = nc ;
+        this.surfaceView.uniforms.channelMultiplier.value = 
+            this.channelMultiplier ;
+    }
+    set minValue(nv){
+        this._minValue = nv ;
+        this.surfaceView.uniforms.minValue.value = nv ;
+    }
+    set maxValue(nv){
+        this._maxValue = nv ;
+        this.surfaceView.uniforms.maxValue.value = nv ;
+    }
+    set colormap(nv){
+        this._colormap.name = nv ;
+        this.surfaceView.uniforms.colormap.value = this.colormapTexture ;
+    }
+    set translation(nv){
+        this._translation = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set rotation(nv){
+        this._rotation = nv ;
+        this.updateModelviewMatrices() ;
+        console.log(this.rotation) ;
+    }
+    set scaling(nv){
+        this._scaling = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set near(nv){
+        this._near = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set far(nv){
+        this._far = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set fovy(nv){
+        this._fovy = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set aspect(nv){
+        this._aspcet = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set eye(nv){
+        this._eye = nv ;
+        this.initViewMatrix() ;
+        this.updateViewMatrix() ;
+    }
+    set center(nv){
+        this._center = nv ;
+        this.initViewMatrix() ;
+        this.updateViewMatrix() ;
+    }
+    set up(nv){
+        this._up = nv ;
+        this.initViewMatrix() ;
+        this.updateViewMatrix() ;
+    }
+    set shininess(nv){
+        this._shininess = nv ;
+        this.surfaceView.uniforms.shininess.value = this.shininess ;
+    }
+    set clearColor(nv){
+        this._clearColor = nv ;
+        this.surfaceView.clearColorValue = nv ;
+        this.surfaceViewBlend.clearColorValue = nv ;
+    }
+    set lightColor(nv){
+        this._lightColor = nv ;
+        this.surfaceView.uniforms.lightColor.value = nv ;
+    }
+    set lightAmbientTerm(nv){
+        this._lightAmbientTerm = nv ;
+        this.surfaceView.uniforms.lightAmbientTerm.value = nv ;
+    }
+   
+    set lightSpecularTerm(nv){
+        this._lightSpecularTerm = nv ;
+        this.surfaceView.uniforms.lightSpecularTerm.value = nv ;
+    }
+ 
+    set lightDirection(nv){
+        this._lightDirection = nv ;
+        this.surfaceView.uniforms.lightDirection.value = nv ;
+    }
+    set materialColor(nv){
+        this._materialColor = nv ;
+        this.surfaceView.uniforms.materialColor.value = nv ;
+    }
+    set materialAmbientTerm(nv){
+        this._materialAmbientTerm = nv ;
+        this.surfaceView.uniforms.materialAmbientTerm.value = nv ;
+    }
+    set materialSpecularTerm(nv){
+        this._materialSpecularTerm = nv ;
+        this.surfaceView.uniforms.materialSpecularTerm.value = nv ;
+    }
+
+    set vertexShader(nv){
+        this.surfaceView.vertexShader = nv ;
+    }
+
+    set fragmentShader(nv){
+        this.surfaceView.fragmentShader = nv ;
+    }
+
+/*------------------------------------------------------------------------
+ * Methods
+ *------------------------------------------------------------------------
+ */
+    // initialize matrices -----------------------------------------------
+    initializeMatrices(){
+        mat4.identity( this.projectionMatrix    ) ;
+        mat4.identity( this.modelMatrix         ) ;
+        mat4.identity( this.viewMatrix          ) ;
+        mat4.identity( this.normalMatrix        ) ;
+        mat4.lookAt(    this.viewMatrix, this.eye, this.center, this.up );
+
+    }
+
+    // init view matrix --------------------------------------------------
+    initViewMatrix(){
+        mat4.identity(  this.viewMatrix                                 );
+        mat4.lookAt(    this.viewMatrix, this.eye, this.center, this.up );
+    }
+
+    // update model view matrices ----------------------------------------
+    updateModelviewMatrices(){
+        mat4.identity( this.projectionMatrix ) ;
+        mat4.perspective( this.projectionMatrix , 
+                this.fovy, this.aspect, 
+                this.near, this.far ) ;
+
+        mat4.identity(  this.modelMatrix ) ;
+        mat4.scale(     this.modelMatrix, this.modelMatrix, this.scaling ) ;
+
+        mat4.rotate(    this.modelMatrix, this.modelMatrix, 
+                this.rotation[0], [1,0,0] ) ;
+        mat4.rotate(    this.modelMatrix, this.modelMatrix,
+                this.rotation[1], [0,1,0] ) ;
+        mat4.rotate(    this.modelMatrix, this.modelMatrix,
+                this.rotation[2], [0,0,1] ) ;
+
+        mat4.translate( this.modelMatrix, this.modelMatrix, 
+                this.translation ) ;
+
+        this.updateNormalMatrix() ;
+
+        this.surfaceView.uniforms.modelMatrix.value = this.modelMatrx ;
+        this.surfaceView.uniforms.projectionMatrix.value 
+            = this.projectionMatrix ;
+    }
+
+    // update viewMatrix -------------------------------------------------
+    updateViewMatrix(){
+        this.controller.update() ;
+        this.surfaceView.uniforms.viewMatrix.value = this.viewMatrix ;
+    }
+
+    // update normalMatrix -----------------------------------------------
+    updateNormalMatrix(){
+        mat4.multiply(  this.normalMatrix, 
+                this.viewMatrix, this.modelMatrix) ; 
+        mat4.invert(    this.normalMatrix , this.normalMatrix ) ;
+        mat4.transpose( this.normalMatrix , this.normalMatrix ) ;
+        this.surfaceView.uniforms.normalMatrix.value = this.normalMatrix ;
+    }
+
+    // render ------------------------------------------------------------
+    render(){
+        // update the view and the normal matrices .......................
+        this.updateViewMatrix() ;
+        this.updateNormalMatrix() ;
+        
+        // clear the target textures before rendering the scene
+        this.surfaceViewTarget.clear(0,0,0,0) ;
+
+        // render the scene to textures ..................................
+        this.surfaceView.render() ;
+
+        // blend the scene onto the screen ...............................
+        this.surfaceViewBlend.render() ;
+        return ;
+    }
+
+    // getCompressedClickPosition ----------------------------------------
+    getCompressedClickPosition(clickPosition){
+        this.surfaceViewCompressedClickPosition
+            .uniforms.clickPosition.value = clickPosition ;
+        this.surfaceViewCompressedClickPosition.render() ;
+        this.surfaceViewCompressedClickPosition.render() ;
+        var val =  this.compressedClickPosition.value ;
+
+        return [val[0],val[1]] ;
+    }
+
+    // -------------------------------------------------------------------
+    // addVectorToGui
+    // -------------------------------------------------------------------
+    addVectorToGui(guiElem, obj, param , opts){
+        let elems = [] ;
+        let labels = opts?.labels ?? 'XYZW' ;
+
+        for (var i=0 ; i< obj[param].length ; i++){
+            elems.push(guiElem.add( obj[param] , i.toString() )
+                    .name( param + ' ' + labels[i] ) );
+            elems[i].onChange( ()=>{ obj[param] = obj[param] } ) ;
+            if ( opts?.callback ){
+                elems[i].onChange( ()=>{ 
+                        obj[param] = obj[param];
+                        opts.callback();
+                        }   ) ;
+            }
+
+            if ( opts?.min ){
+                elems[i].min( opts.min ) ;
+            }
+            if ( opts?.max ){
+                elems[i].max( opts.max ) ;
+            }
+            if ( opts?.step ){
+                elems[i].step( opts.step ) ;
+            }
+
+        }
+        return elems ;
+    }
+
+    // -------------------------------------------------------------------
+    // add controllers to the gui 
+    // -------------------------------------------------------------------
+    controlByGui( gelem ){
+        // modelView .....................................................
+        gelem.f_m = gelem.addFolder('Model View') ;
+        gelem.f_m.t = gelem.f_m.addFolder('Translation') ;
+        gelem.f_m.r = gelem.f_m.addFolder('Rotation') ;
+        gelem.f_m.s = gelem.f_m.addFolder('Scaling') ;
+        this.addVectorToGui( gelem.f_m.t , this, 'translation', 
+                {step: 0.01} ) ;
+        this.addVectorToGui( gelem.f_m.r , this, 'rotation', 
+                {step: 0.01} ) ;
+        this.addVectorToGui( gelem.f_m.s , this, 
+                'scaling', {step: 0.01} ) ;
+
+        // projection ....................................................
+        gelem.f_0 = gelem.addFolder('projection') ;
+        gelem.f_0.add( this, 'fovy' ).step(0.01).min(0.01)  ;
+        gelem.f_0.add( this, 'near' ).step(0.02).min(0.01)  ;
+        gelem.f_0.add( this, 'far' ).step(0.02).min(0) ;
+
+        // coloring ......................................................
+        gelem.f_c = gelem.addFolder('Coloring and lighting') ;
+
+        gelem.f_c.f_l = gelem.f_c.addFolder('Lighting') ;
+        this.addVectorToGui(  gelem.f_c.f_l , this, 'lightDirection', 
+                { step : 0.01 } ) ;
+        this.addVectorToGui(  gelem.f_c.f_l , this, 'lightColor', 
+                {labels : 'RGBA' , step : 0.01 }) ;
+
+        gelem.f_c.f_l.add( this, 'lightSpecularTerm' ).step(0.01).min(0)  ;
+        gelem.f_c.f_l.add( this, 'lightAmbientTerm' ).step(0.01).min(0)  ;
+
+        gelem.f_c.m_p =  gelem.f_c.addFolder('Material Properties') ;
+
+        gelem.f_c.m_p.add( this, 'materialAmbientTerm' ).step(0.01).min(0)  ;
+        gelem.f_c.m_p.add( this, 'materialSpecularTerm' ).step(0.01).min(0) ;
+        gelem.f_c.m_p.add( this, 'shininess' ).step(0.01).min(0) ;
+
+        gelem.f_c.f_cr = gelem.f_c.addFolder('Colormap and Range') ;
+        gelem.f_c.f_cr.add( this , 'colormap', this.colormaps ) ;
+        gelem.f_c.f_cr.add( this , 'minValue').step(0.01) ;
+        gelem.f_c.f_cr.add( this , 'maxValue').step(0.01) ;
+        gelem.f_c.f_cr.add( this , 'channel', ['r', 'g','b','a'] )
+            .name('Color channel' )  ;
+
+
+    }
+
+}
 
 /*========================================================================
  * TextureTableBond
@@ -11378,6 +12061,9 @@ this.Plot1D              = Plot1D ;
 this.Plot2D              = Plot2D ;
 this.Tvsx                = Tvsx ;
 this.VolumeRayCaster     = VolumeRayCaster ;
+this.SurfaceVisualizer   = SurfaceVisualizer ;
+this.StructureFromJSON   = StructureFromJSON ;
+
 this.getColormapList     = getColormapList ;
 this.Colormap            = Colormap ;
 this.Probe               = Probe ;

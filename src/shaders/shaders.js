@@ -2312,3 +2312,539 @@ void main(){
     outTrgt = (s) ? vec4(1.):vec4(0.) ;
 }` } ;
 
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * compressedCoordinator
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var compressedCoordinator = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * compressedCoordinator : calculate the 3d coordinate on the compressed
+ * structure.
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Sat 06 Mar 2021 18:15:05 (EST)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * interface variables
+ *------------------------------------------------------------------------
+ */
+in vec2 cc ;
+uniform sampler2D   full3dCrdt ;
+uniform usampler2D  fullTexelIndex ;
+
+layout (location=0) out vec4 compressed3dCrdt ;
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main(){
+    // calculate the current texels position
+    ivec2 texelPos = ivec2(cc*vec2(textureSize( fullTexelIndex, 0 ))) ;
+
+    // index of the current texel in the full domain
+    ivec4 fullTexelIndex = ivec4(
+        texelFetch( fullTexelIndex, texelPos, 0)
+    ) ;
+
+    if ( fullTexelIndex.a == 1){
+        // extract the coorinate of the point from the full3dCrdt 
+        compressed3dCrdt = texelFetch( full3dCrdt, fullTexelIndex.xy, 0 ) ;
+        return ;
+    }else{
+        // value for extra-no domain points
+        compressed3dCrdt = vec4(-1.) ;
+        return ;
+    }
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fullCoordinator
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fullCoordinator = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * crdtShader   :   calculates the coordinate of each point in 3d
+ *
+ * PROGRAMMER   :   ABOUZAR KABOUDIAN
+ * DATE         :   Mon 14 Aug 2017 10:35:08 AM EDT
+ * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * Interface Vars.
+ *------------------------------------------------------------------------
+ */
+in      vec2        pixPos ;
+uniform float       mx, my ;
+
+/*------------------------------------------------------------------------
+ * Output
+ *------------------------------------------------------------------------
+ */
+layout (location = 0 ) out vec4  crdt ;
+
+/*========================================================================
+ * main body 
+ *========================================================================
+ */
+void main(){
+    crdt = vec4(1.0) ;
+
+    crdt.x = (pixPos.x - floor(pixPos.x * mx)/mx ) * mx ;
+    crdt.y = (pixPos.y - floor(pixPos.y * my)/my ) * my ;
+
+    float sliceNo = floor(pixPos.x * mx) 
+                +   ( ( my-1.0) - floor(pixPos.y * my) )*mx ;
+
+    crdt.z = sliceNo/(mx*my) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * normals
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var normals = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * normals.frag : calculate the direction of outward normal to the full
+ * structure
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Wed 31 Mar 2021 12:44:17 (EDT)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+in vec2 cc ;
+uniform usampler2D fullTexelIndex, compressedTexelIndex ;
+uniform int mx, my ;
+
+layout (location = 0) out vec4 normals ;
+
+/*========================================================================
+ * getIJ: return the IJ index on the full 2d-matrix
+ *========================================================================
+ */
+ivec2 getIJ(ivec3 idx, ivec3 size){
+    int si = idx.z % mx ;
+    int sj = idx.z / mx ;
+
+    return ivec2(size.x*si + idx.x, (my-1-sj)*size.y + idx.y) ;
+}
+
+/*========================================================================
+ * getIdx: get the 3d index from the IJ indices
+ *========================================================================
+ */
+ivec3 getIdx( ivec2 IJ, ivec3 size ){
+    int si = IJ.x / size.x ;
+    int sj = (my - 1) - (IJ.y/size.y) ;
+
+    return ivec3( IJ.x % size.x, IJ.y % size.y , mx*sj + si ) ;
+}
+
+/*========================================================================
+ * macros 
+ *========================================================================
+ */
+#define isInBounds( v )     (all(greaterThanEqual(v,ivec3(0))) && \
+        all(lessThan(v,size)))
+
+#define texelInDomain(I)  ( texelFetch(compressedTexelIndex,(I),\
+            0).a==uint(1) )
+#define inDomain( v )   (texelInDomain( getIJ(v, size) )) 
+#define isNotGood(v)   (!( inDomain(v) && isInBounds( v ) ))
+
+// the flipped direction of U ensures that the normal points out of the
+// domain
+#define getU(v)         (isNotGood(v) ? 1. : 0.) 
+
+#define firstDerivative(C,D)   (getU((C)+(D))-getU((C)-(D)))  
+
+
+/*========================================================================
+ * main
+ *========================================================================
+ */
+void main(){
+    // get the sizes of the compressed and the full domain ...............
+    ivec2 compSize = textureSize(fullTexelIndex,        0 ) ;
+    ivec2 fullSize = textureSize(compressedTexelIndex,  0 ) ;
+
+    // calculate the resolution of the full domain .......................
+    ivec3 size = ivec3( fullSize.x/mx , fullSize.y/my, mx*my ) ;
+
+    // get the textel position and full texel index ......................
+    ivec2 texelPos = ivec2( cc*vec2(compSize) ) ; 
+    ivec4 fullTexelIndex = 
+        ivec4( texelFetch(  fullTexelIndex, texelPos, 0) ) ;
+
+    // if the texel is extra, just leave .................................
+    if ( fullTexelIndex.a != 1 ){
+        normals = vec4(0.,0.,0.,-1.) ;
+        return ;
+    }
+
+    // 3-dimentional index of the of texel ...............................
+    ivec3 cidx = getIdx( fullTexelIndex.xy , size ) ;
+
+    // directional vectors ...............................................
+    ivec3 ii  = ivec3(1,0,0) ;
+    ivec3 jj  = ivec3(0,1,0) ;
+    ivec3 kk  = ivec3(0,0,1) ;
+
+    // secondary directions ..............................................
+    ivec3 sij = jj+kk ;     ivec3 sik = kk-jj ;
+    ivec3 sji = ii+kk ;     ivec3 sjk = kk-ii ;
+    ivec3 ski = ii+jj ;     ivec3 skj = jj-ii ;
+
+    float dii = firstDerivative(cidx, ii  ) ;
+    float djj = firstDerivative(cidx, jj  ) ;
+    float dkk = firstDerivative(cidx, kk  ) ;
+    float dij = firstDerivative(cidx, sij ) ;
+    float dik = firstDerivative(cidx, sik ) ;
+    float dji = firstDerivative(cidx, sji ) ;
+    float djk = firstDerivative(cidx, sjk ) ;
+    float dki = firstDerivative(cidx, ski ) ;
+    float dkj = firstDerivative(cidx, skj ) ;
+
+    float omega = 0.586 ;
+    
+    #define f(a)    vec3(a)
+
+    vec3 normDir = (2.*omega+1.)*(f(ii)*dii + f(jj)*djj + f(kk)*dkk) 
+        + (1.-omega)*(  f(sij)*dij + f(sik)*dik 
+                    +   f(sji)*dji + f(sjk)*djk
+                    +   f(ski)*dki + f(skj)*dkj )/sqrt(2.) ;
+    
+
+    normals  = vec4( normalize(normDir), 1.) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vsurfaceView
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var vsurfaceView = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * vsurfaceView.vert : vertex shader used in the surface visualizer
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Fri 03 Sep 2021 17:33:09 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * interface variables
+ *------------------------------------------------------------------------
+ */
+in vec2             indices ;
+uniform sampler2D   icolor ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform mat4        normalMatrix ;
+
+uniform float       minValue ;
+uniform float       maxValue ;
+uniform vec4        channelMultiplier ;
+uniform sampler2D   colormap ;
+uniform sampler2D   compressed3dCrdt ;
+uniform sampler2D   normals ;
+uniform usampler2D  compressedTexelIndex ;
+
+uniform float       shininess;
+uniform vec4        lightColor;
+uniform float       lightAmbientTerm;
+uniform float       lightSpecularTerm;
+uniform vec3        lightDirection;
+
+uniform float       materialAmbientTerm;
+uniform float       materialSpecularTerm;
+
+/*------------------------------------------------------------------------
+ * macros 
+ *------------------------------------------------------------------------
+ */
+#define PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+/*------------------------------------------------------------------------
+ * outputs to the fragment shader 
+ *------------------------------------------------------------------------
+ */
+out vec3 N ;
+out vec3 E ;
+out vec4 color ;
+out vec3 position ;
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main() {
+    ivec2 uncompSize = textureSize( compressedTexelIndex, 0 ) ;
+    ivec2 voxelIndex = 
+        ivec2(texelFetch(compressedTexelIndex, ivec2(indices), 0).xy) ;
+    
+    position = texelFetch(compressed3dCrdt , voxelIndex, 0 ).xyz ;
+    
+    vec3 pos = (position - vec3(0.5))*2. ; 
+    color = texelFetch(  icolor, voxelIndex, 0 ) ; 
+
+/*------------------------------------------------------------------------
+ * Lighting and coloring
+ *------------------------------------------------------------------------
+ */
+    // normal direction ..................................................
+    N = normalize( 
+            vec3( normalMatrix*texelFetch( normals, voxelIndex, 0 )  )) ;
+    
+    // eye vector ........................................................
+    E = normalize(-(viewMatrix*modelMatrix*vec4(pos,1.)).xyz) ;
+
+    
+    // final vertex position .............................................
+    gl_Position = projectionMatrix
+        *viewMatrix
+        *modelMatrix
+        *vec4(pos , 1.0);
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fsurfaceView
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fsurfaceView = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * fsurfaceView.frag : fragment shader for surface visualization
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Fri 03 Sep 2021 17:37:47 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * interfacial variables
+ *------------------------------------------------------------------------
+ */
+uniform sampler2D icolor ;
+
+uniform float       minValue ;
+uniform float       maxValue ;
+uniform vec4        channelMultiplier ;
+uniform sampler2D   colormap ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform mat4        normalMatrix ;
+
+uniform sampler2D   compressed3dCrdt ;
+uniform sampler2D   normals ;
+uniform usampler2D  compressedTexelIndex ;
+
+uniform float       shininess;
+uniform vec4        lightColor;
+uniform float       lightAmbientTerm;
+uniform float       lightSpecularTerm;
+uniform vec3        lightDirection;
+uniform vec4        lightAmbientColor ;
+
+uniform vec4        materialColor ;
+uniform float       materialAmbientTerm;
+uniform float       materialSpecularTerm;
+
+/*------------------------------------------------------------------------
+ * input from the vertex shader
+ *------------------------------------------------------------------------
+ */
+in vec3 position ;
+in vec4 color ;
+in vec3 N ;
+in vec3 E ;
+
+/*------------------------------------------------------------------------
+ * macros 
+ *------------------------------------------------------------------------
+ */
+#define PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+/*------------------------------------------------------------------------
+ * output of the shader
+ *------------------------------------------------------------------------
+ */
+layout (location = 0 ) out vec4 projectedColors ;
+layout (location = 1 ) out vec4 projectedCoordinates ;
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main() {
+
+    float val =
+        (dot(color,channelMultiplier)-minValue)/(maxValue-minValue) ;
+   
+    vec4 mcolor = val > 0. ? texture(colormap , vec2(val,0.5) ) :
+        materialColor ;
+   // vec4 materialColor = color.r < 0.1 ? 
+   //     vec4(vec3(0.95),1.) : vec4(0.,color.r,0.1,1.) ;
+
+    // light direction ...................................................
+    vec3 L = normalize(lightDirection) ;
+
+    // reflection direction ..............................................
+    vec3 R = reflect(L,N) ;
+    float lambertTerm = dot(N,-L) ;
+
+    // AmbientTerm .......................................................
+    vec4 Ia = v4(lightAmbientTerm) * v4(materialAmbientTerm);
+
+    // Diffuse ...........................................................
+    vec4 Id = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // SpecularTerm ......................................................
+    vec4 Is = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // calculating final color ...........................................
+    if (lambertTerm > 0.0) {
+      Id = lightColor * mcolor * lambertTerm;
+      float specular = pow( max(dot(R, E), 0.0), shininess);
+      Is = v4(lightSpecularTerm) *v4(materialSpecularTerm) 
+          * specular ;
+    }
+
+    // Final fargment color takes into account all light values that
+    // were computed within the fragment shader
+    projectedColors         = vec4( vec3(Ia + Id + Is), 1.0     ) ;
+
+    // position of the projected voxel used in picking the click positions
+    projectedCoordinates    = vec4( position ,          1.0     ) ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fsurfaceViewBlend
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fsurfaceViewBlend = { value : `#version 300 es
+
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+in vec2 cc ;
+
+uniform sampler2D  projectedColors ;
+
+out vec4 color ;
+
+void main(){
+    color = texture( projectedColors , cc ) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fsurfaceViewCompressedClickPosition
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fsurfaceViewCompressedClickPosition = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * fsurfaceViewComrpessedClickPosition.frag:
+ *      This shader is designed to determine the position of the click on 
+ *      a compressed data structure. This is useful for picking signals
+ *      from a particular point on the data structure.
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Fri 03 Sep 2021 19:59:37 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * Interfacial Variables
+ *------------------------------------------------------------------------
+ */
+uniform vec2        clickPosition ;
+uniform sampler2D   projectedCoordinates ;
+uniform usampler2D  compressedTexelIndex ;
+uniform int         mx , my ;
+uniform float       cwidth, cheight ;
+
+/*------------------------------------------------------------------------
+ * output colors
+ *------------------------------------------------------------------------
+ */
+layout (location =0 ) out vec4 compressedClickPosition ;
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main(){
+    // Read the coordinate of the click in the model 3D space ............
+    vec3 crdt = texture( projectedCoordinates, clickPosition ).xyz ;
+
+    // What is the size of the non-compressed texture ....................
+    ivec2 fullSize = ivec2(textureSize( compressedTexelIndex, 0).xy) ;
+
+    // resoltion of the 3D domain ........................................
+    int  width = fullSize.x/mx ;
+    int  height= fullSize.y/my ;
+    int  depth = mx*my ;
+
+    // figure out the index of the voxel that was picked in the three
+    // dimensional space .................................................
+    int i = int(floor(crdt.x*float(width  ))) ;
+    int j = int(floor(crdt.y*float(height ))) ;
+    int k = int(floor(crdt.z*float(depth  ))) ;
+
+    // figure out the index of the corresponding pixel on the uncompressed
+    // data structure ....................................................
+    int si = k%mx ;
+    int sj = k/mx ;
+
+    int I = width*si+i ;
+    int J = (my-1-sj)*height + j ;
+
+    // determine the index of the voxel in the compressed data structure .
+    uvec2 voxelCompressedIndex = texelFetch(compressedTexelIndex,
+            ivec2(I,J) , 0 ).xy ;
+
+    // determine the floating point pixel coordinate of the click point in
+    // the compressed data structure .....................................
+    compressedClickPosition = 
+        vec4(voxelCompressedIndex.x,voxelCompressedIndex.y,0,0)/
+        vec4(cwidth,cheight,cwidth,cheight) ;
+
+    return ;
+}` } ;
+

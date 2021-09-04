@@ -11772,6 +11772,542 @@ void main(){
     outTrgt = (s) ? vec4(1.):vec4(0.) ;
 }` } ;
 
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * compressedCoordinator
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var compressedCoordinator = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * compressedCoordinator : calculate the 3d coordinate on the compressed
+ * structure.
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Sat 06 Mar 2021 18:15:05 (EST)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * interface variables
+ *------------------------------------------------------------------------
+ */
+in vec2 cc ;
+uniform sampler2D   full3dCrdt ;
+uniform usampler2D  fullTexelIndex ;
+
+layout (location=0) out vec4 compressed3dCrdt ;
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main(){
+    // calculate the current texels position
+    ivec2 texelPos = ivec2(cc*vec2(textureSize( fullTexelIndex, 0 ))) ;
+
+    // index of the current texel in the full domain
+    ivec4 fullTexelIndex = ivec4(
+        texelFetch( fullTexelIndex, texelPos, 0)
+    ) ;
+
+    if ( fullTexelIndex.a == 1){
+        // extract the coorinate of the point from the full3dCrdt 
+        compressed3dCrdt = texelFetch( full3dCrdt, fullTexelIndex.xy, 0 ) ;
+        return ;
+    }else{
+        // value for extra-no domain points
+        compressed3dCrdt = vec4(-1.) ;
+        return ;
+    }
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fullCoordinator
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fullCoordinator = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * crdtShader   :   calculates the coordinate of each point in 3d
+ *
+ * PROGRAMMER   :   ABOUZAR KABOUDIAN
+ * DATE         :   Mon 14 Aug 2017 10:35:08 AM EDT
+ * PLACE        :   Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * Interface Vars.
+ *------------------------------------------------------------------------
+ */
+in      vec2        pixPos ;
+uniform float       mx, my ;
+
+/*------------------------------------------------------------------------
+ * Output
+ *------------------------------------------------------------------------
+ */
+layout (location = 0 ) out vec4  crdt ;
+
+/*========================================================================
+ * main body 
+ *========================================================================
+ */
+void main(){
+    crdt = vec4(1.0) ;
+
+    crdt.x = (pixPos.x - floor(pixPos.x * mx)/mx ) * mx ;
+    crdt.y = (pixPos.y - floor(pixPos.y * my)/my ) * my ;
+
+    float sliceNo = floor(pixPos.x * mx) 
+                +   ( ( my-1.0) - floor(pixPos.y * my) )*mx ;
+
+    crdt.z = sliceNo/(mx*my) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * normals
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var normals = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * normals.frag : calculate the direction of outward normal to the full
+ * structure
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Wed 31 Mar 2021 12:44:17 (EDT)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+in vec2 cc ;
+uniform usampler2D fullTexelIndex, compressedTexelIndex ;
+uniform int mx, my ;
+
+layout (location = 0) out vec4 normals ;
+
+/*========================================================================
+ * getIJ: return the IJ index on the full 2d-matrix
+ *========================================================================
+ */
+ivec2 getIJ(ivec3 idx, ivec3 size){
+    int si = idx.z % mx ;
+    int sj = idx.z / mx ;
+
+    return ivec2(size.x*si + idx.x, (my-1-sj)*size.y + idx.y) ;
+}
+
+/*========================================================================
+ * getIdx: get the 3d index from the IJ indices
+ *========================================================================
+ */
+ivec3 getIdx( ivec2 IJ, ivec3 size ){
+    int si = IJ.x / size.x ;
+    int sj = (my - 1) - (IJ.y/size.y) ;
+
+    return ivec3( IJ.x % size.x, IJ.y % size.y , mx*sj + si ) ;
+}
+
+/*========================================================================
+ * macros 
+ *========================================================================
+ */
+#define isInBounds( v )     (all(greaterThanEqual(v,ivec3(0))) && \
+        all(lessThan(v,size)))
+
+#define texelInDomain(I)  ( texelFetch(compressedTexelIndex,(I),\
+            0).a==uint(1) )
+#define inDomain( v )   (texelInDomain( getIJ(v, size) )) 
+#define isNotGood(v)   (!( inDomain(v) && isInBounds( v ) ))
+
+// the flipped direction of U ensures that the normal points out of the
+// domain
+#define getU(v)         (isNotGood(v) ? 1. : 0.) 
+
+#define firstDerivative(C,D)   (getU((C)+(D))-getU((C)-(D)))  
+
+
+/*========================================================================
+ * main
+ *========================================================================
+ */
+void main(){
+    // get the sizes of the compressed and the full domain ...............
+    ivec2 compSize = textureSize(fullTexelIndex,        0 ) ;
+    ivec2 fullSize = textureSize(compressedTexelIndex,  0 ) ;
+
+    // calculate the resolution of the full domain .......................
+    ivec3 size = ivec3( fullSize.x/mx , fullSize.y/my, mx*my ) ;
+
+    // get the textel position and full texel index ......................
+    ivec2 texelPos = ivec2( cc*vec2(compSize) ) ; 
+    ivec4 fullTexelIndex = 
+        ivec4( texelFetch(  fullTexelIndex, texelPos, 0) ) ;
+
+    // if the texel is extra, just leave .................................
+    if ( fullTexelIndex.a != 1 ){
+        normals = vec4(0.,0.,0.,-1.) ;
+        return ;
+    }
+
+    // 3-dimentional index of the of texel ...............................
+    ivec3 cidx = getIdx( fullTexelIndex.xy , size ) ;
+
+    // directional vectors ...............................................
+    ivec3 ii  = ivec3(1,0,0) ;
+    ivec3 jj  = ivec3(0,1,0) ;
+    ivec3 kk  = ivec3(0,0,1) ;
+
+    // secondary directions ..............................................
+    ivec3 sij = jj+kk ;     ivec3 sik = kk-jj ;
+    ivec3 sji = ii+kk ;     ivec3 sjk = kk-ii ;
+    ivec3 ski = ii+jj ;     ivec3 skj = jj-ii ;
+
+    float dii = firstDerivative(cidx, ii  ) ;
+    float djj = firstDerivative(cidx, jj  ) ;
+    float dkk = firstDerivative(cidx, kk  ) ;
+    float dij = firstDerivative(cidx, sij ) ;
+    float dik = firstDerivative(cidx, sik ) ;
+    float dji = firstDerivative(cidx, sji ) ;
+    float djk = firstDerivative(cidx, sjk ) ;
+    float dki = firstDerivative(cidx, ski ) ;
+    float dkj = firstDerivative(cidx, skj ) ;
+
+    float omega = 0.586 ;
+    
+    #define f(a)    vec3(a)
+
+    vec3 normDir = (2.*omega+1.)*(f(ii)*dii + f(jj)*djj + f(kk)*dkk) 
+        + (1.-omega)*(  f(sij)*dij + f(sik)*dik 
+                    +   f(sji)*dji + f(sjk)*djk
+                    +   f(ski)*dki + f(skj)*dkj )/sqrt(2.) ;
+    
+
+    normals  = vec4( normalize(normDir), 1.) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vsurfaceView
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var vsurfaceView = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * vsurfaceView.vert : vertex shader used in the surface visualizer
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Fri 03 Sep 2021 17:33:09 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * interface variables
+ *------------------------------------------------------------------------
+ */
+in vec2             indices ;
+uniform sampler2D   icolor ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform mat4        normalMatrix ;
+
+uniform float       minValue ;
+uniform float       maxValue ;
+uniform vec4        channelMultiplier ;
+uniform sampler2D   colormap ;
+uniform sampler2D   compressed3dCrdt ;
+uniform sampler2D   normals ;
+uniform usampler2D  compressedTexelIndex ;
+
+uniform float       shininess;
+uniform vec4        lightColor;
+uniform float       lightAmbientTerm;
+uniform float       lightSpecularTerm;
+uniform vec3        lightDirection;
+
+uniform float       materialAmbientTerm;
+uniform float       materialSpecularTerm;
+
+/*------------------------------------------------------------------------
+ * macros 
+ *------------------------------------------------------------------------
+ */
+#define PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+/*------------------------------------------------------------------------
+ * outputs to the fragment shader 
+ *------------------------------------------------------------------------
+ */
+out vec3 N ;
+out vec3 E ;
+out vec4 color ;
+out vec3 position ;
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main() {
+    ivec2 uncompSize = textureSize( compressedTexelIndex, 0 ) ;
+    ivec2 voxelIndex = 
+        ivec2(texelFetch(compressedTexelIndex, ivec2(indices), 0).xy) ;
+    
+    position = texelFetch(compressed3dCrdt , voxelIndex, 0 ).xyz ;
+    
+    vec3 pos = (position - vec3(0.5))*2. ; 
+    color = texelFetch(  icolor, voxelIndex, 0 ) ; 
+
+/*------------------------------------------------------------------------
+ * Lighting and coloring
+ *------------------------------------------------------------------------
+ */
+    // normal direction ..................................................
+    N = normalize( 
+            vec3( normalMatrix*texelFetch( normals, voxelIndex, 0 )  )) ;
+    
+    // eye vector ........................................................
+    E = normalize(-(viewMatrix*modelMatrix*vec4(pos,1.)).xyz) ;
+
+    
+    // final vertex position .............................................
+    gl_Position = projectionMatrix
+        *viewMatrix
+        *modelMatrix
+        *vec4(pos , 1.0);
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fsurfaceView
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fsurfaceView = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * fsurfaceView.frag : fragment shader for surface visualization
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Fri 03 Sep 2021 17:37:47 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * interfacial variables
+ *------------------------------------------------------------------------
+ */
+uniform sampler2D icolor ;
+
+uniform float       minValue ;
+uniform float       maxValue ;
+uniform vec4        channelMultiplier ;
+uniform sampler2D   colormap ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform mat4        normalMatrix ;
+
+uniform sampler2D   compressed3dCrdt ;
+uniform sampler2D   normals ;
+uniform usampler2D  compressedTexelIndex ;
+
+uniform float       shininess;
+uniform vec4        lightColor;
+uniform float       lightAmbientTerm;
+uniform float       lightSpecularTerm;
+uniform vec3        lightDirection;
+uniform vec4        lightAmbientColor ;
+
+uniform vec4        materialColor ;
+uniform float       materialAmbientTerm;
+uniform float       materialSpecularTerm;
+
+/*------------------------------------------------------------------------
+ * input from the vertex shader
+ *------------------------------------------------------------------------
+ */
+in vec3 position ;
+in vec4 color ;
+in vec3 N ;
+in vec3 E ;
+
+/*------------------------------------------------------------------------
+ * macros 
+ *------------------------------------------------------------------------
+ */
+#define PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+/*------------------------------------------------------------------------
+ * output of the shader
+ *------------------------------------------------------------------------
+ */
+layout (location = 0 ) out vec4 projectedColors ;
+layout (location = 1 ) out vec4 projectedCoordinates ;
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main() {
+
+    float val =
+        (dot(color,channelMultiplier)-minValue)/(maxValue-minValue) ;
+   
+    vec4 mcolor = val > 0. ? texture(colormap , vec2(val,0.5) ) :
+        materialColor ;
+   // vec4 materialColor = color.r < 0.1 ? 
+   //     vec4(vec3(0.95),1.) : vec4(0.,color.r,0.1,1.) ;
+
+    // light direction ...................................................
+    vec3 L = normalize(lightDirection) ;
+
+    // reflection direction ..............................................
+    vec3 R = reflect(L,N) ;
+    float lambertTerm = dot(N,-L) ;
+
+    // AmbientTerm .......................................................
+    vec4 Ia = v4(lightAmbientTerm) * v4(materialAmbientTerm);
+
+    // Diffuse ...........................................................
+    vec4 Id = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // SpecularTerm ......................................................
+    vec4 Is = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // calculating final color ...........................................
+    if (lambertTerm > 0.0) {
+      Id = lightColor * mcolor * lambertTerm;
+      float specular = pow( max(dot(R, E), 0.0), shininess);
+      Is = v4(lightSpecularTerm) *v4(materialSpecularTerm) 
+          * specular ;
+    }
+
+    // Final fargment color takes into account all light values that
+    // were computed within the fragment shader
+    projectedColors         = vec4( vec3(Ia + Id + Is), 1.0     ) ;
+
+    // position of the projected voxel used in picking the click positions
+    projectedCoordinates    = vec4( position ,          1.0     ) ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fsurfaceViewBlend
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fsurfaceViewBlend = { value : `#version 300 es
+
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+in vec2 cc ;
+
+uniform sampler2D  projectedColors ;
+
+out vec4 color ;
+
+void main(){
+    color = texture( projectedColors , cc ) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fsurfaceViewCompressedClickPosition
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fsurfaceViewCompressedClickPosition = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * fsurfaceViewComrpessedClickPosition.frag:
+ *      This shader is designed to determine the position of the click on 
+ *      a compressed data structure. This is useful for picking signals
+ *      from a particular point on the data structure.
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Fri 03 Sep 2021 19:59:37 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+/*------------------------------------------------------------------------
+ * Interfacial Variables
+ *------------------------------------------------------------------------
+ */
+uniform vec2        clickPosition ;
+uniform sampler2D   projectedCoordinates ;
+uniform usampler2D  compressedTexelIndex ;
+uniform int         mx , my ;
+uniform float       cwidth, cheight ;
+
+/*------------------------------------------------------------------------
+ * output colors
+ *------------------------------------------------------------------------
+ */
+layout (location =0 ) out vec4 compressedClickPosition ;
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main(){
+    // Read the coordinate of the click in the model 3D space ............
+    vec3 crdt = texture( projectedCoordinates, clickPosition ).xyz ;
+
+    // What is the size of the non-compressed texture ....................
+    ivec2 fullSize = ivec2(textureSize( compressedTexelIndex, 0).xy) ;
+
+    // resoltion of the 3D domain ........................................
+    int  width = fullSize.x/mx ;
+    int  height= fullSize.y/my ;
+    int  depth = mx*my ;
+
+    // figure out the index of the voxel that was picked in the three
+    // dimensional space .................................................
+    int i = int(floor(crdt.x*float(width  ))) ;
+    int j = int(floor(crdt.y*float(height ))) ;
+    int k = int(floor(crdt.z*float(depth  ))) ;
+
+    // figure out the index of the corresponding pixel on the uncompressed
+    // data structure ....................................................
+    int si = k%mx ;
+    int sj = k/mx ;
+
+    int I = width*si+i ;
+    int J = (my-1-sj)*height + j ;
+
+    // determine the index of the voxel in the compressed data structure .
+    uvec2 voxelCompressedIndex = texelFetch(compressedTexelIndex,
+            ivec2(I,J) , 0 ).xy ;
+
+    // determine the floating point pixel coordinate of the click point in
+    // the compressed data structure .....................................
+    compressedClickPosition = 
+        vec4(voxelCompressedIndex.x,voxelCompressedIndex.y,0,0)/
+        vec4(cwidth,cheight,cwidth,cheight) ;
+
+    return ;
+}` } ;
+
 
 function getColormapList(){
 	 return [
@@ -12731,8 +13267,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.8.14' ;
-var updateTime = 'Fri 03 Sep 2021 17:17:15 (EDT)' ;
+var version = 'v6.9.00' ;
+var updateTime = 'Sat 04 Sep 2021 18:54:47 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -21390,6 +21926,689 @@ class VolumeRayCaster{
         this.rrender() ;
     }
 }
+/*========================================================================
+ * StructureFromJSON
+ *========================================================================
+ */
+class StructureFromJSON{
+    constructor(data){
+        this._mx            = data?.mx ;
+        this._my            = data?.my ;
+        this._width         = data?.comp_width ;
+        this._height        = data?.comp_height ;
+        this._fwidth        = data?.full_width ;
+        this._fheight       = data?.full_height ;
+        this.boundaryFacets = data?.boundaryFacets ;
+
+        // full texel index ..............................................
+        this.fullTexelIndex 
+            = new Uint32Texture(this.width,this.height, 
+                {
+                    data : new Uint32Array(data.fullTexelIndex)
+                } 
+            ) ;
+
+        // compressed texel index ........................................
+        this.compressedTexelIndex = new Uint32Texture(
+                this.fullWidth,this.fullHeight, 
+                {
+                    data : new Uint32Array(data.compressedTexelIndex)
+                } 
+            ) ;
+
+        // full 3d coordinates ...........................................
+        this.full3dCrdt = 
+            new Float32Texture( this.fwidth, this.fheight ) ;
+        this.fullCoordinator = new Solver({
+            fragmentShader: fullCoordinator.value ,
+            uniforms : { 
+                mx : { type : 'f' , value : this.mx } ,
+                my : { type : 'f' , value : this.my } ,
+            } ,
+            targets : { 
+                crdt : { location : 0, target : this.full3dCrdt } ,
+            }
+        } ) ;
+        this.fullCoordinator.render() ;
+
+        // compressed 3d coordinates .....................................
+        this.compressed3dCrdt = 
+            new Float32Texture( this.width, this.height ) ;
+
+        this.compressedCoordinator = new Solver({
+            fragmentShader : compressedCoordinator.value ,
+            uniforms : {
+                fullTexelIndex : { type : 't', value : this.fullTexelIndex } ,
+                full3dCrdt     : { type : 't', value : this.full3dCrdt  } ,
+            } ,
+            targets : {
+               compressed3dCrdt : { location : 0, target : this.compressed3dCrdt }
+            }
+        } ) ;
+        this.compressedCoordinator.render() ;
+
+        // normals to the compressed surface .............................
+        this.normals = 
+            new Float32Texture( this.width, this.height ) ;
+
+        this.normalizer = new Solver({
+            fragmentShader : normals.value ,
+            uniforms : {
+                mx : { type : 'i', value : this.mx } ,
+                my : { type : 'i', value : this.my } ,
+                fullTexelIndex : 
+                    { type : 't', value : this.fullTexelIndex } ,
+                compressedTexelIndex :
+                    { type : 't', value : this.compressedTexelIndex } ,
+            } ,
+            targets : { 
+                normals : { location : 0, target : this.normals } 
+            }
+        } ) ;
+        this.normalizer.render() ;
+
+        return ;
+
+    } /* End of constructor */
+
+    // getters ...........................................................
+    get width(){            return this._width ;        }
+    get compWidth(){        return this._width ;        }
+    get compressedWidth(){  return this._width ;        }
+    get cwidth(){           return this._width ;        }
+    get compressed_width(){ return this._width ;        }
+    get comp_width(){       return this._width ;        }
+
+    get height(){           return this._height ;       }
+    get cheight(){          return this._height ;       }
+    get compHeight(){       return this._height ;       }
+    get compressedHeight(){ return this._height ;       }
+    get compressed_height(){return this._height ;       }
+    get comp_height(){      return this._height ;       }
+    
+    get fullWidth(){        return this._fwidth ;       }
+    get full_width(){       return this._fwidth ;       } 
+    get fwidth(){           return this._fwidth ;       } 
+    
+    get fullHeight(){       return this._fheight ;      } 
+    get full_height(){      return this._fheight ;      } 
+    get fheight(){          return this._fheight ;      } 
+    
+    get mx(){               return this._mx ;           }
+    get my(){               return this._my ;           }
+
+}
+
+/*========================================================================
+ * SurfaceVisualizer
+ *========================================================================
+ */
+class SurfaceVisualizer{
+
+/*------------------------------------------------------------------------
+ * constructor:
+ *------------------------------------------------------------------------
+ */
+    constructor(opts){
+        this._target            = opts?.input       ?? null ;
+        this._target            = opts?.target      ?? this.input ;
+        this._canvas            = opts?.canvas      ?? null ;
+        this._structure         = opts?.structure   ?? null ;
+
+        this._channel           = opts?.channel     ?? 'r'  ;
+
+        this._channelMultipliers = {
+            r : [ 1.,0.,0.,0. ] , 
+            g : [ 0.,1.,0.,0. ] ,
+            b : [ 0.,0.,1.,0. ] ,
+            a : [ 0.,0.,0.,1. ] } ;
+
+        this._channels          = Object.keys( this._channelMultipliers ) ;
+
+        this._minValue          = opts?.minValue    ?? 0. ;
+        this._maxValue          = opts?.maxValue    ?? 1. ;
+
+        this._rotation          = opts?.rotation    ?? [0.,0.,0.] ;
+        this._translation       = opts?.translation ?? [0.,0.,0.] ;
+        this._scaling           = opts?.scaling     ?? [1.,1.,1.] ;
+
+        // near and far end of view frustrum .............................
+        this._near              = opts?.near        ?? 0.01 ;
+        this._far               = opts?.far         ?? 100. ;
+
+        // vertical field of view in radians .............................
+        this._fovy              = opts?.fovy        ?? 1.0 ;
+
+        // aspect ration of the view frustrum (width/height) .............
+        this._aspect            = opts?.aspect      ?? 1.0 ;
+
+        // view properties (eye location, center of the view and up
+        // direction .....................................................
+        this._eye               = opts?.eye         ?? [0.,0.,-5] ;
+        this._center            = opts?.center      ?? [0,0,0] ;
+        this._up                = opts?.up          ?? [0.,1.,0] ;
+
+        this._colormap          = new Colormap() ;
+        
+        //this._colormap          = opts?.colormap    ?? 'rainbowHotSpring' ;
+
+        // lighting properties ...........................................
+        this._clearColor        = opts?.clearColor  ?? [1,1,1,1] ;
+        this._lightColor        = opts?.lightColor  ?? [1,1,1,1] ;
+        this._lightAmbientTerm  = opts?.lightAmbientTerm ?? 0. ;
+        this._lightSpecularTerm = opts?.lightSpecularTerm ?? 1. ;
+        this._lightDirection    = opts?.lightDirection ?? [0.6,0.25,-0.66];
+
+        // surface properties ............................................
+        this._shininess         = opts?.shininess   ?? 10.0 ;
+        this._materialColor     = opts?.materialColor ?? 
+            [.97,.97,0.97,1.] ;
+        this._materialAmbientTerm= opts?.materialAmbientTerm ?? 1.9 ;
+        this._materialSpecularTerm = opts?.materialSpecularTerm ?? 0.8 ;
+
+        // operational textures ..........................................
+        this.projectedCoordinates  
+            = new Float32Texture( this.width, this.height ) ;
+        this.projectedColors 
+            = new Float32Texture( this.width, this.height ) ;
+
+        this.depthTexture = new DepthTexture( this.width, this.height ) ;
+
+        this.surfaceViewTarget = new DrawTargets(
+                [ this.projectedColors, this.projectedCoordinates ] ) ;
+
+        this.compressedClickPosition = 
+            new Float32Texture(1,1, {pairable: true}) ;
+    
+        // normal, projection, and view matrices .........................
+        this.modelMatrix        = mat4.create() ;
+        this.projectionMatrix   = mat4.create() ;
+        this.viewMatrix         = mat4.create() ;
+        this.normalMatrix       = mat4.create() ;
+        
+        // initialize the matrices .......................................
+        this.initializeMatrices() ;
+
+        // setup the orbital camera controller ...........................
+        this.controller = new OrbitalCameraControl( this.viewMatrix,
+                5., this.canvas )  ;
+
+        // setup surface solver ..........................................
+        this.surfaceView = new Solver({
+            vertexShader    : vsurfaceView.value ,
+            fragmentShader  : fsurfaceView.value ,
+            uniforms : {
+                compressedTexelIndex : { type : 's',
+                    value : this.structure.compressedTexelIndex     } ,
+                compressed3dCrdt : { type : 's', 
+                    value : this.structure.compressed3dCrdt         } ,
+                normals : { 
+                    type : 't', value : this.structure.normals      } ,
+                
+                icolor : { 
+                    type : 't', value : this.input } ,
+
+                colormap : { type : 't', value : this.colormapTexture } ,
+
+                channelMultiplier : {     type : 'v4',
+                                        value : this.channelMultiplier } ,
+                minValue : { type : 'f', value : this.minValue      } ,
+                maxValue : { type : 'f', value : this.maxValue      } ,
+                
+                projectionMatrix : {
+                    type : 'mat4', value : this.projectionMatrix    } ,
+                modelMatrix     : { 
+                    type : 'mat4', value : this.modelMatrix         } ,
+                viewMatrix      : { 
+                    type : 'mat4', value : this.viewMatrix          } ,
+                normalMatrix    : { 
+                    type : 'mat4', value : this.normalMatrix        } ,
+                
+                shininess           : { 
+                    type : 'f',  value : this.shininess             } ,
+                lightColor          : { 
+                    type : 'v4', value : this.lightColor            } ,
+                lightAmbientTerm    : { 
+                    type : 'f',  value : this.lightAmbientTerm      } ,
+                lightSpecularTerm   : { 
+                    type : 'f',  value : this.lightSpecularTerm     } ,
+                lightDirection      : { 
+                    type : 'v3', value : this.lightDirection        } ,
+                materialColor : { 
+                    type : 'v4', value : this.materialColor         } ,
+                materialAmbientTerm : { 
+                    type : 'f',  value : this.materialAmbientTerm   }  , 
+                materialSpecularTerm: { 
+                    type : 'f', value : this.materialSpecularTerm   } ,
+            } ,
+            geometry : {} ,
+            draw : new DrawArrays( 'triangles', 0,this.drawCount) ,
+            depthTest :  true ,
+            depthTexture : this.depthTexture,
+            targets : {
+                projectedColors : { 
+                        location : 0, target : this.projectedColors     } ,
+                projectedCoordinates : {
+                        location : 1, target : this.projectedCoordinates} ,
+            } ,
+        } ) ;
+
+        // update the modelview matrices .................................
+        this.updateModelviewMatrices() ;
+
+        // vertex array object ...........................................
+        //let gl = gl ;
+        let prog = this.surfaceView.prog ;
+        
+        gl.useProgram( prog ) ;
+        this.vertexIndexLoc = gl.getAttribLocation( prog, 'indices' ) ;
+
+        this.vao = gl.createVertexArray() ;
+        gl.bindVertexArray(this.vao) ;
+
+        this.vertexIndexBuffer = gl.createBuffer() ;
+        gl.bindBuffer( gl.ARRAY_BUFFER, this.vertexIndexBuffer ) ;
+        gl.bufferData( gl.ARRAY_BUFFER,
+                new Float32Array( this.boundaryFacets.indices) ,
+                gl.STATIC_DRAW ) ;
+        gl.vertexAttribPointer(
+                this.vertexIndexLoc ,
+                2 ,         // number of items per vertex
+                gl.FLOAT ,  // type
+                false ,     // normalize
+                0 ,         // stride
+                0           // offset
+            ) ;
+
+        gl.enableVertexAttribArray( this.vertexIndexLoc) ;
+        gl.bindBuffer( gl.ARRAY_BUFFER, null ) ;
+        gl.bindVertexArray(null) ;
+
+        this.surfaceView.vao = this.vao ;
+
+        // surfaceViewBlend ..............................................
+        this.surfaceViewBlend = new Solver({
+            fragmentShader : fsurfaceViewBlend.value ,
+            uniforms : { 
+                projectedColors : { 
+                    type    : 't', 
+                    value   : this.projectedColors } ,
+            } ,
+            canvas : this.canvas ,
+        } ) ;
+
+        // surfaceViewCompressedClickPosition ............................
+        this.surfaceViewCompressedClickPosition = new Solver({
+            fragmentShader : fsurfaceViewCompressedClickPosition.value,
+            uniforms : { 
+                clickPosition : { type : 'v2', value : [0,0] } ,
+                projectedCoordinates : 
+                    { type : 't', value : this.projectedCoordinates } ,
+                compressedTexelIndex : 
+                    { type : 't', 
+                        value : this.structure.compressedTexelIndex } ,
+                mx : { type : 'i' , value : this.structure.mx } ,
+                my : { type : 'i' , value : this.structure.my } ,
+                cwidth : { type : 'f', value : this.structure.cwidth } ,
+                cheight: { type : 'f', value : this.structure.cheight } ,
+            } ,
+            targets : { 
+                compressedClickPosition : {
+                    location : 0, target : this.compressedClickPosition }
+            }
+        } ) ;
+
+
+        this.colormap = opts?.colormap ?? 'rainbowHotspring' ;
+    } // End of constructor ----------------------------------------------
+
+/*------------------------------------------------------------------------
+ * getters 
+ *------------------------------------------------------------------------
+ */
+    get input(){                return this._target                     }
+    get structure(){            return this._structure ;                } 
+    get canvas(){               return this._canvas ;                   }
+    get width(){                return this.canvas.width                } 
+    get height(){               return this.canvas.height               }
+    
+    get channel(){              return this._channel ;                  } 
+
+    get channelMultiplier(){ 
+        return this._channelMultipliers[this.channel] ;                 } 
+    
+    get minValue(){             return this._minValue ;                 } 
+    get maxValue(){             return this._maxValue ;                 } 
+    get colormap(){             return this._colormap.name ;            }
+    get colormaps(){            return this._colormap.list              } 
+    get colormapTexture(){      return this._colormap.texture ;         }
+    
+    get translation(){          return this._translation ;              } 
+    get rotation(){             return this._rotation ;                 }
+    get scaling(){              return this._scaling ;                  }
+
+    get near(){                 return this._near ;                     }
+    get far(){                  return this._far;                       }
+    get fovy(){                 return this._fovy ;                     }
+    get aspect(){               return this._aspect ;                   }
+
+    get eye(){                  return this._eye ;                      }
+    get center(){               return this._center ;                   }
+    get up(){                   return this._up ;                       }
+
+    get shininess(){            return this._shininess                  } 
+    get clearColor(){           return this._clearColor                 } 
+    get lightColor(){           return this._lightColor                 } 
+    get lightAmbientTerm(){     return this._lightAmbientTerm           }
+    get lightSpecularTerm(){    return this._lightSpecularTerm          }
+    get lightDirection(){       return this._lightDirection             }
+    get materialColor(){        return this._materialColor              }
+    get materialAmbientTerm(){  return this._materialAmbientTerm        }
+    get materialSpecularTerm(){ return this._materialSpecularTerm       }
+
+    get boundaryFacets(){       return this.structure.boundaryFacets    } 
+    get noTriangles(){          return this.boundaryFacets.noTriangles  } 
+    get drawCount(){            return this.boundaryFacets.noNodes      }
+
+    get vertexShader(){         
+        return this.surfaceView.vertexShader                     } 
+    get fragmentShader(){       
+        return this.surfaceView.fragmentShader                   }
+    
+
+/*------------------------------------------------------------------------
+ * setters
+ *------------------------------------------------------------------------
+ */
+    set input(nin){
+        this._target = nin ;
+        this.surfaceView.uniforms.icolor.value = this.input ;
+    }
+    set target(nt){
+        this.input = nt ;
+    }
+    set channel(nc){
+        this._channel = nc ;
+        this.surfaceView.uniforms.channelMultiplier.value = 
+            this.channelMultiplier ;
+    }
+    set minValue(nv){
+        this._minValue = nv ;
+        this.surfaceView.uniforms.minValue.value = nv ;
+    }
+    set maxValue(nv){
+        this._maxValue = nv ;
+        this.surfaceView.uniforms.maxValue.value = nv ;
+    }
+    set colormap(nv){
+        this._colormap.name = nv ;
+        this.surfaceView.uniforms.colormap.value = this.colormapTexture ;
+    }
+    set translation(nv){
+        this._translation = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set rotation(nv){
+        this._rotation = nv ;
+        this.updateModelviewMatrices() ;
+        console.log(this.rotation) ;
+    }
+    set scaling(nv){
+        this._scaling = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set near(nv){
+        this._near = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set far(nv){
+        this._far = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set fovy(nv){
+        this._fovy = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set aspect(nv){
+        this._aspcet = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    set eye(nv){
+        this._eye = nv ;
+        this.initViewMatrix() ;
+        this.updateViewMatrix() ;
+    }
+    set center(nv){
+        this._center = nv ;
+        this.initViewMatrix() ;
+        this.updateViewMatrix() ;
+    }
+    set up(nv){
+        this._up = nv ;
+        this.initViewMatrix() ;
+        this.updateViewMatrix() ;
+    }
+    set shininess(nv){
+        this._shininess = nv ;
+        this.surfaceView.uniforms.shininess.value = this.shininess ;
+    }
+    set clearColor(nv){
+        this._clearColor = nv ;
+        this.surfaceView.clearColorValue = nv ;
+        this.surfaceViewBlend.clearColorValue = nv ;
+    }
+    set lightColor(nv){
+        this._lightColor = nv ;
+        this.surfaceView.uniforms.lightColor.value = nv ;
+    }
+    set lightAmbientTerm(nv){
+        this._lightAmbientTerm = nv ;
+        this.surfaceView.uniforms.lightAmbientTerm.value = nv ;
+    }
+   
+    set lightSpecularTerm(nv){
+        this._lightSpecularTerm = nv ;
+        this.surfaceView.uniforms.lightSpecularTerm.value = nv ;
+    }
+ 
+    set lightDirection(nv){
+        this._lightDirection = nv ;
+        this.surfaceView.uniforms.lightDirection.value = nv ;
+    }
+    set materialColor(nv){
+        this._materialColor = nv ;
+        this.surfaceView.uniforms.materialColor.value = nv ;
+    }
+    set materialAmbientTerm(nv){
+        this._materialAmbientTerm = nv ;
+        this.surfaceView.uniforms.materialAmbientTerm.value = nv ;
+    }
+    set materialSpecularTerm(nv){
+        this._materialSpecularTerm = nv ;
+        this.surfaceView.uniforms.materialSpecularTerm.value = nv ;
+    }
+
+    set vertexShader(nv){
+        this.surfaceView.vertexShader = nv ;
+    }
+
+    set fragmentShader(nv){
+        this.surfaceView.fragmentShader = nv ;
+    }
+
+/*------------------------------------------------------------------------
+ * Methods
+ *------------------------------------------------------------------------
+ */
+    // initialize matrices -----------------------------------------------
+    initializeMatrices(){
+        mat4.identity( this.projectionMatrix    ) ;
+        mat4.identity( this.modelMatrix         ) ;
+        mat4.identity( this.viewMatrix          ) ;
+        mat4.identity( this.normalMatrix        ) ;
+        mat4.lookAt(    this.viewMatrix, this.eye, this.center, this.up );
+
+    }
+
+    // init view matrix --------------------------------------------------
+    initViewMatrix(){
+        mat4.identity(  this.viewMatrix                                 );
+        mat4.lookAt(    this.viewMatrix, this.eye, this.center, this.up );
+    }
+
+    // update model view matrices ----------------------------------------
+    updateModelviewMatrices(){
+        mat4.identity( this.projectionMatrix ) ;
+        mat4.perspective( this.projectionMatrix , 
+                this.fovy, this.aspect, 
+                this.near, this.far ) ;
+
+        mat4.identity(  this.modelMatrix ) ;
+        mat4.scale(     this.modelMatrix, this.modelMatrix, this.scaling ) ;
+
+        mat4.rotate(    this.modelMatrix, this.modelMatrix, 
+                this.rotation[0], [1,0,0] ) ;
+        mat4.rotate(    this.modelMatrix, this.modelMatrix,
+                this.rotation[1], [0,1,0] ) ;
+        mat4.rotate(    this.modelMatrix, this.modelMatrix,
+                this.rotation[2], [0,0,1] ) ;
+
+        mat4.translate( this.modelMatrix, this.modelMatrix, 
+                this.translation ) ;
+
+        this.updateNormalMatrix() ;
+
+        this.surfaceView.uniforms.modelMatrix.value = this.modelMatrx ;
+        this.surfaceView.uniforms.projectionMatrix.value 
+            = this.projectionMatrix ;
+    }
+
+    // update viewMatrix -------------------------------------------------
+    updateViewMatrix(){
+        this.controller.update() ;
+        this.surfaceView.uniforms.viewMatrix.value = this.viewMatrix ;
+    }
+
+    // update normalMatrix -----------------------------------------------
+    updateNormalMatrix(){
+        mat4.multiply(  this.normalMatrix, 
+                this.viewMatrix, this.modelMatrix) ; 
+        mat4.invert(    this.normalMatrix , this.normalMatrix ) ;
+        mat4.transpose( this.normalMatrix , this.normalMatrix ) ;
+        this.surfaceView.uniforms.normalMatrix.value = this.normalMatrix ;
+    }
+
+    // render ------------------------------------------------------------
+    render(){
+        // update the view and the normal matrices .......................
+        this.updateViewMatrix() ;
+        this.updateNormalMatrix() ;
+        
+        // clear the target textures before rendering the scene
+        this.surfaceViewTarget.clear(0,0,0,0) ;
+
+        // render the scene to textures ..................................
+        this.surfaceView.render() ;
+
+        // blend the scene onto the screen ...............................
+        this.surfaceViewBlend.render() ;
+        return ;
+    }
+
+    // getCompressedClickPosition ----------------------------------------
+    getCompressedClickPosition(clickPosition){
+        this.surfaceViewCompressedClickPosition
+            .uniforms.clickPosition.value = clickPosition ;
+        this.surfaceViewCompressedClickPosition.render() ;
+        this.surfaceViewCompressedClickPosition.render() ;
+        var val =  this.compressedClickPosition.value ;
+
+        return [val[0],val[1]] ;
+    }
+
+    // -------------------------------------------------------------------
+    // addVectorToGui
+    // -------------------------------------------------------------------
+    addVectorToGui(guiElem, obj, param , opts){
+        let elems = [] ;
+        let labels = opts?.labels ?? 'XYZW' ;
+
+        for (var i=0 ; i< obj[param].length ; i++){
+            elems.push(guiElem.add( obj[param] , i.toString() )
+                    .name( param + ' ' + labels[i] ) );
+            elems[i].onChange( ()=>{ obj[param] = obj[param] } ) ;
+            if ( opts?.callback ){
+                elems[i].onChange( ()=>{ 
+                        obj[param] = obj[param];
+                        opts.callback();
+                        }   ) ;
+            }
+
+            if ( opts?.min ){
+                elems[i].min( opts.min ) ;
+            }
+            if ( opts?.max ){
+                elems[i].max( opts.max ) ;
+            }
+            if ( opts?.step ){
+                elems[i].step( opts.step ) ;
+            }
+
+        }
+        return elems ;
+    }
+
+    // -------------------------------------------------------------------
+    // add controllers to the gui 
+    // -------------------------------------------------------------------
+    controlByGui( gelem ){
+        // modelView .....................................................
+        gelem.f_m = gelem.addFolder('Model View') ;
+        gelem.f_m.t = gelem.f_m.addFolder('Translation') ;
+        gelem.f_m.r = gelem.f_m.addFolder('Rotation') ;
+        gelem.f_m.s = gelem.f_m.addFolder('Scaling') ;
+        this.addVectorToGui( gelem.f_m.t , this, 'translation', 
+                {step: 0.01} ) ;
+        this.addVectorToGui( gelem.f_m.r , this, 'rotation', 
+                {step: 0.01} ) ;
+        this.addVectorToGui( gelem.f_m.s , this, 
+                'scaling', {step: 0.01} ) ;
+
+        // projection ....................................................
+        gelem.f_0 = gelem.addFolder('projection') ;
+        gelem.f_0.add( this, 'fovy' ).step(0.01).min(0.01)  ;
+        gelem.f_0.add( this, 'near' ).step(0.02).min(0.01)  ;
+        gelem.f_0.add( this, 'far' ).step(0.02).min(0) ;
+
+        // coloring ......................................................
+        gelem.f_c = gelem.addFolder('Coloring and lighting') ;
+
+        gelem.f_c.f_l = gelem.f_c.addFolder('Lighting') ;
+        this.addVectorToGui(  gelem.f_c.f_l , this, 'lightDirection', 
+                { step : 0.01 } ) ;
+        this.addVectorToGui(  gelem.f_c.f_l , this, 'lightColor', 
+                {labels : 'RGBA' , step : 0.01 }) ;
+
+        gelem.f_c.f_l.add( this, 'lightSpecularTerm' ).step(0.01).min(0)  ;
+        gelem.f_c.f_l.add( this, 'lightAmbientTerm' ).step(0.01).min(0)  ;
+
+        gelem.f_c.m_p =  gelem.f_c.addFolder('Material Properties') ;
+
+        gelem.f_c.m_p.add( this, 'materialAmbientTerm' ).step(0.01).min(0)  ;
+        gelem.f_c.m_p.add( this, 'materialSpecularTerm' ).step(0.01).min(0) ;
+        gelem.f_c.m_p.add( this, 'shininess' ).step(0.01).min(0) ;
+
+        gelem.f_c.f_cr = gelem.f_c.addFolder('Colormap and Range') ;
+        gelem.f_c.f_cr.add( this , 'colormap', this.colormaps ) ;
+        gelem.f_c.f_cr.add( this , 'minValue').step(0.01) ;
+        gelem.f_c.f_cr.add( this , 'maxValue').step(0.01) ;
+        gelem.f_c.f_cr.add( this , 'channel', ['r', 'g','b','a'] )
+            .name('Color channel' )  ;
+
+
+    }
+
+}
 
 /*========================================================================
  * TextureTableBond
@@ -24111,6 +25330,9 @@ this.Plot1D              = Plot1D ;
 this.Plot2D              = Plot2D ;
 this.Tvsx                = Tvsx ;
 this.VolumeRayCaster     = VolumeRayCaster ;
+this.SurfaceVisualizer   = SurfaceVisualizer ;
+this.StructureFromJSON   = StructureFromJSON ;
+
 this.getColormapList     = getColormapList ;
 this.Colormap            = Colormap ;
 this.Probe               = Probe ;
