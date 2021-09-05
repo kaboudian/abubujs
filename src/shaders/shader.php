@@ -57,9 +57,8 @@ function getShader($file, $dir ){
         if ($noInclude){
             $output = $output . $arr[$i] . "\n" ;
         }
-
     }
-    return trim($output) ;
+    return $output ;
 }
 
 /*========================================================================
@@ -87,7 +86,7 @@ function shader($name, $dir = __dir__ . "/"){
     }
 
 
-    $content = getShader($name . $FEXT, $dir ) ;
+    $content = trim(getShader($name . $FEXT, $dir )) ;
 
     echo $content ;
     echo "\n</script><!-- end of " . 
@@ -124,7 +123,7 @@ function shader2var($name,$dir = __dir__ . "/"){
     }
 
     
-    $content = getShader($name . $FEXT, $dir ) ;
+    $content = trim(getShader($name . $FEXT, $dir )) ;
 
     echo "var " . $name . " = { value : `" . $content . "` } ;" ;
     echo "\n\n" ;
