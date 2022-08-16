@@ -1,4 +1,4 @@
-var version = 'v6.9.01' ;
+var version = 'v6.9.02' ;
 var updateTime = 'Tue 16 Aug 2022 18:44:08 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -7115,8 +7115,8 @@ class Tvsx{
 
         this._ftvsx = new FloatRenderTarget(this._width, this._height) ;
         this._stvsx = new FloatRenderTarget(this._width, this._height) ;
-        this._fttex = new FloatRenderTarget(1,1) ;
-        this._sttex = new FloatRenderTarget(1,1) ;
+        this._fttex = new Float32Texture(1,1,{pairable: true}) ;
+        this._sttex = new Float32Texture(1,1,{pairable: true}) ;
 
         this.ftvsxs = new Solver({
             fragmentShader  : tvsxShader.value,
@@ -7362,8 +7362,8 @@ class Tvsx{
         }
     }
     init(){
-        this._fttex.data = [0,0,0,0] ;
-        this._sttex.data = [0,0,0,0] ;
+        this._fttex.data = new Float32Array([0,0,0,0])  ;
+        this._sttex.data = new Float32Array([0,0,0,0])  ;
         this.render() ;
     }
 
