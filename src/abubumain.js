@@ -1,5 +1,5 @@
-var version = 'v6.9.00' ;
-var updateTime = 'Sat 04 Sep 2021 18:54:47 (EDT)' ;
+var version = 'v6.9.01' ;
+var updateTime = 'Tue 16 Aug 2022 18:44:08 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -7113,7 +7113,6 @@ class Tvsx{
         this._width     = readOption( options.width     ,   512         ) ;
         this._height    = readOption( options.height    ,   512         ) ;
 
-
         this._ftvsx = new FloatRenderTarget(this._width, this._height) ;
         this._stvsx = new FloatRenderTarget(this._width, this._height) ;
         this._fttex = new FloatRenderTarget(1,1) ;
@@ -7140,7 +7139,7 @@ class Tvsx{
                     value   : this._timeWindow 
                 } ,
 
-                devaultVal : { 
+                defaultVal : { 
                     type    : 'v4', 
                     value   : this._defaultVal 
                 } ,
@@ -7149,7 +7148,7 @@ class Tvsx{
                     value   : this._yLevel 
                 } ,
                 refresh : { 
-                    type    : 'f', 
+                    type    : 'b', 
                     value   : this._refresh 
                 } ,
             } ,
@@ -7179,7 +7178,7 @@ class Tvsx{
                     value   : this._timeWindow 
                 } ,
 
-                devaultVal : { 
+                defaultVal : { 
                     type    : 'v4', 
                     value   : this._defaultVal 
                 } ,
@@ -7188,7 +7187,7 @@ class Tvsx{
                     value   : this._yLevel 
                 } ,
                 refresh : { 
-                    type    : 'f', 
+                    type    : 'b', 
                     value   : this._refresh 
                 } ,
             } ,
@@ -7243,7 +7242,7 @@ class Tvsx{
             clearColor   : false ,
         } ) ;
 
-
+        this.init() ;
     }
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *  CONSTRUCTOR ENDS
@@ -7361,6 +7360,11 @@ class Tvsx{
             this.srender() ;
             this.frender() ;
         }
+    }
+    init(){
+        this._fttex.data = [0,0,0,0] ;
+        this._sttex.data = [0,0,0,0] ;
+        this.render() ;
     }
 
 } /* End of TvsxPlot class definition */
