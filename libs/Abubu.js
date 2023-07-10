@@ -10408,11 +10408,12 @@ precision highp int ;
 in vec2             pixPos ;
 
 uniform sampler2D   inText, inTvsx , ttex ;
-uniform vec4        rgba0 ;
+uniform vec4        defaultVal ;
 uniform float       timeWindow ;
 uniform float       yLevel ;
-layout  (location = 0) out vec4 outTvsx ;
 uniform bool        refresh ;
+
+layout  (location = 0) out vec4 outTvsx ;
 
 void main(){
     outTvsx = texture( inTvsx , pixPos ) ;
@@ -10423,7 +10424,7 @@ void main(){
         outTvsx = texture(inText, vec2(pixPos.x,yLevel)) ;
     }
     if (t<dt && refresh){
-        outTvsx = rgba0 ;
+        outTvsx = defaultVal ;
     }
     return ;
 }` } ;
@@ -11790,6 +11791,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * interface variables
  *------------------------------------------------------------------------
@@ -11841,6 +11844,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * Interface Vars.
  *------------------------------------------------------------------------
@@ -11889,6 +11894,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 in vec2 cc ;
 uniform usampler2D fullTexelIndex, compressedTexelIndex ;
 uniform int mx, my ;
@@ -12013,6 +12020,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * interface variables
  *------------------------------------------------------------------------
@@ -12108,6 +12117,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * interfacial variables
  *------------------------------------------------------------------------
@@ -12218,6 +12229,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 in vec2 cc ;
 
 uniform sampler2D  projectedColors ;
@@ -12249,6 +12262,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * Interfacial Variables
  *------------------------------------------------------------------------
@@ -13267,8 +13282,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.9.00' ;
-var updateTime = 'Sat 04 Sep 2021 18:54:47 (EDT)' ;
+var version = 'v6.9.02' ;
+var updateTime = 'Tue 16 Aug 2022 18:44:08 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -20382,11 +20397,10 @@ class Tvsx{
         this._width     = readOption( options.width     ,   512         ) ;
         this._height    = readOption( options.height    ,   512         ) ;
 
-
         this._ftvsx = new FloatRenderTarget(this._width, this._height) ;
         this._stvsx = new FloatRenderTarget(this._width, this._height) ;
-        this._fttex = new FloatRenderTarget(1,1) ;
-        this._sttex = new FloatRenderTarget(1,1) ;
+        this._fttex = new Float32Texture(1,1,{pairable: true}) ;
+        this._sttex = new Float32Texture(1,1,{pairable: true}) ;
 
         this.ftvsxs = new Solver({
             fragmentShader  : tvsxShader.value,
@@ -20409,7 +20423,7 @@ class Tvsx{
                     value   : this._timeWindow 
                 } ,
 
-                devaultVal : { 
+                defaultVal : { 
                     type    : 'v4', 
                     value   : this._defaultVal 
                 } ,
@@ -20418,7 +20432,7 @@ class Tvsx{
                     value   : this._yLevel 
                 } ,
                 refresh : { 
-                    type    : 'f', 
+                    type    : 'b', 
                     value   : this._refresh 
                 } ,
             } ,
@@ -20448,7 +20462,7 @@ class Tvsx{
                     value   : this._timeWindow 
                 } ,
 
-                devaultVal : { 
+                defaultVal : { 
                     type    : 'v4', 
                     value   : this._defaultVal 
                 } ,
@@ -20457,7 +20471,7 @@ class Tvsx{
                     value   : this._yLevel 
                 } ,
                 refresh : { 
-                    type    : 'f', 
+                    type    : 'b', 
                     value   : this._refresh 
                 } ,
             } ,
@@ -20512,7 +20526,7 @@ class Tvsx{
             clearColor   : false ,
         } ) ;
 
-
+        this.init() ;
     }
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *  CONSTRUCTOR ENDS
@@ -20630,6 +20644,11 @@ class Tvsx{
             this.srender() ;
             this.frender() ;
         }
+    }
+    init(){
+        this._fttex.data = new Float32Array([0,0,0,0])  ;
+        this._sttex.data = new Float32Array([0,0,0,0])  ;
+        this.render() ;
     }
 
 } /* End of TvsxPlot class definition */

@@ -948,11 +948,12 @@ precision highp int ;
 in vec2             pixPos ;
 
 uniform sampler2D   inText, inTvsx , ttex ;
-uniform vec4        rgba0 ;
+uniform vec4        defaultVal ;
 uniform float       timeWindow ;
 uniform float       yLevel ;
-layout  (location = 0) out vec4 outTvsx ;
 uniform bool        refresh ;
+
+layout  (location = 0) out vec4 outTvsx ;
 
 void main(){
     outTvsx = texture( inTvsx , pixPos ) ;
@@ -963,7 +964,7 @@ void main(){
         outTvsx = texture(inText, vec2(pixPos.x,yLevel)) ;
     }
     if (t<dt && refresh){
-        outTvsx = rgba0 ;
+        outTvsx = defaultVal ;
     }
     return ;
 }` } ;
@@ -2330,6 +2331,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * interface variables
  *------------------------------------------------------------------------
@@ -2381,6 +2384,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * Interface Vars.
  *------------------------------------------------------------------------
@@ -2429,6 +2434,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 in vec2 cc ;
 uniform usampler2D fullTexelIndex, compressedTexelIndex ;
 uniform int mx, my ;
@@ -2553,6 +2560,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * interface variables
  *------------------------------------------------------------------------
@@ -2648,6 +2657,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * interfacial variables
  *------------------------------------------------------------------------
@@ -2758,6 +2769,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 in vec2 cc ;
 
 uniform sampler2D  projectedColors ;
@@ -2789,6 +2802,8 @@ precision highp float;
 precision highp int ;
 precision highp isampler2D ;
 precision highp usampler2D ;
+
+
 /*------------------------------------------------------------------------
  * Interfacial Variables
  *------------------------------------------------------------------------
