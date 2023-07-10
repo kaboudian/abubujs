@@ -12323,6 +12323,977 @@ void main(){
     return ;
 }` } ;
 
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * cvertex
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var cvertex = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * 
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Wed 31 Mar 2021 19:06:52 (EDT)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform float       voxelSize ;
+uniform int         noVoxels ;
+
+uniform sampler2D   icolor ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform mat4        normalMatrix ;
+
+uniform sampler2D   compressed3dCrdt ;
+uniform sampler2D   normals ;
+
+uniform float       shininess;
+uniform vec4        lightColor;
+uniform float       lightAmbientTerm;
+uniform float       lightSpecularTerm;
+uniform vec3        lightDirection;
+
+uniform float       materialAmbientTerm;
+uniform float       materialSpecularTerm;
+
+out vec4            ocolor ;
+
+out float           shade ;
+
+#define PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main() {
+    vec3 vertCrds[36] ;
+int indx = 0 ;
+vec3 vertCrds[36] ;
+
+/* ~~~~~~~~~~~~~~~~ */
+/* Front PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 1F
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+
+// 2F
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+/* ~~~~~~~~~~~~~~~~ */
+/* RIGHT PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 3R
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+
+// 4R
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BOTTOM PLANE     */
+/* ~~~~~~~~~~~~~~~~ */
+// 5B
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 6B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+
+/* ~~~~~~~~~~~~~~~~ */
+/* LEFT PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 7L
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 8L
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* TOP PLANE        */
+/* ~~~~~~~~~~~~~~~~ */
+// 9T
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+// 10T
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BACK PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 11B
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 12B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,0) ;  // 5 
+
+
+
+    int  vertId  = gl_VertexID % 36  ; 
+    int  voxelId = gl_VertexID / 36 ;
+
+    //shade = 1.0 ;
+
+    ivec2 isize = textureSize(compressed3dCrdt,        0 ) ;
+    ivec2 voxelIndex = ivec2( voxelId % isize.x , voxelId / isize.x ) ;
+    
+    vec4 pos4 = texelFetch(compressed3dCrdt, voxelIndex, 0 ) ;
+
+    shade =  (pos4.a > 0.5) ? 1. : 0. ;
+
+    vec3 pos =  (pos4.xyz - vec3(0.5))*2. ; 
+    pos += voxelSize*0.005*2.*(vertCrds[vertId]-vec3(0.5)) ; 
+
+    vec4  color   = texelFetch(  icolor, voxelIndex, 0 ) ; 
+   
+    vec4 materialColor = color.r < 0.1 ? 
+        vec4(vec3(0.8),1.) : vec4(0.,color.r,0.1,1.) ;
+
+    materialColor = mix(vec4(0.,0.,1.0,1.),vec4(1.,1.,0.,1.), color.r) ;
+
+    if (color.r < 0.1){
+         shade = shade*0. ;
+    }
+/*------------------------------------------------------------------------
+ * Lighting and coloring
+ *------------------------------------------------------------------------
+ */
+    // normal direction ..................................................
+    vec3 N = normalize( 
+            vec3( normalMatrix*texelFetch( normals, voxelIndex, 0 )  )) ;
+    
+    // eye vector ........................................................
+    vec3 E = normalize(-(viewMatrix*modelMatrix*vec4(pos,1.)).xyz) ;
+
+    // light direction ...................................................
+    vec3 L = normalize(lightDirection) ;
+
+    // reflection direction ..............................................
+    vec3 R = reflect(L,N) ;
+    float lambertTerm = dot(N,-L) ;
+
+    // AmbientTerm .......................................................
+    vec4 Ia = v4(lightAmbientTerm) * v4(materialAmbientTerm);
+
+    // Diffuse ...........................................................
+    vec4 Id = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // SpecularTerm ......................................................
+    vec4 Is = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // calculating final color ...........................................
+    if (lambertTerm > 0.0) {
+      Id = lightColor * materialColor * lambertTerm;
+      float specular = pow( max(dot(R, E), 0.0), shininess);
+      Is = v4(lightSpecularTerm) *v4(materialSpecularTerm) 
+          * specular ;
+    }
+
+    // Final fargment color takes into account all light values that
+    // were computed within the fragment shader
+    ocolor = vec4(vec3(Ia + Id + Is), 1.0);
+
+    // final vertex position .............................................
+    gl_Position = projectionMatrix
+        *viewMatrix
+        *modelMatrix
+        *vec4(pos , 1.0);
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * cfrag
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var cfrag = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+
+in float red ;
+out vec4 outColor;
+
+in float shade ;
+in vec4 ocolor ;
+void main() {
+
+    if (shade <0.5){
+       discard ;
+    }
+    outColor = ocolor ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * wavefrontNormal
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var wavefrontNormal = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * wavefrontNormal.frag     :    calculate wave front normals
+ * 
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Mon 13 Sep 2021 10:29:12 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+in vec2 cc ;
+
+uniform sampler2D   icolor ;
+uniform sampler2D   inormals ;
+uniform usampler2D  fullTexelIndex, compressedTexelIndex ;
+uniform int         mx, my ;
+
+out vec4 onormals ;
+
+/*========================================================================
+ * getIJ: return the IJ index on the full 2d-matrix
+ *========================================================================
+ */
+ivec2 getIJ(ivec3 idx, ivec3 size){
+    int si = idx.z % mx ;
+    int sj = idx.z / mx ;
+
+    return ivec2(size.x*si + idx.x, (my-1-sj)*size.y + idx.y) ;
+}
+
+/*========================================================================
+ * getIdx: get the 3d index from the IJ indices
+ *========================================================================
+ */
+ivec3 getIdx( ivec2 IJ, ivec3 size ){
+    int si = IJ.x / size.x ;
+    int sj = (my - 1) - (IJ.y/size.y) ;
+
+    return ivec3( IJ.x % size.x, IJ.y % size.y , mx*sj + si ) ;
+}
+
+bool isAbove( ivec3 idx, ivec3 size ){
+    ivec2 IJ = getIJ( idx, size ) ;
+    ivec2 ij = ivec2(texelFetch( compressedTexelIndex , IJ, 0 ).xy)  ;
+    
+    return (texelFetch(icolor, ij,0).r >= 0.1) ;
+}
+
+
+/*========================================================================
+ * macros 
+ *========================================================================
+ */
+#define isInBounds( v )     (all(greaterThanEqual(v,ivec3(0))) && \
+        all(lessThan(v,size)))
+
+#define texelInDomain(I)  ( texelFetch(compressedTexelIndex,(I),\
+            0).a==uint(1) )
+#define inDomain( v )   (texelInDomain( getIJ(v, size) )) 
+#define isAboveThreshold(v)     isAbove( v , size )
+
+#define isNotGood(v)  \
+    (!(inDomain(v) && isInBounds( v ) && isAboveThreshold(v)))
+
+//bool isNotGood( ivec3 v , ivec3 size){
+//    bool notInDomainOrBound  = !( inDomain(v) && isInBounds( v ) ) ;
+//    bool above = isAbove(v,size) ;
+//    return !above ||  ;
+//}
+
+// the flipped direction of U ensures that the normal points out of the
+// domain
+#define getU(v)         (isNotGood(v) ? 1. : 0.) 
+
+#define firstDerivative(C,D)   (getU((C)+(D))-getU((C)-(D)))  
+
+
+/*========================================================================
+ * main
+ *========================================================================
+ */
+void main(){
+    // get the sizes of the compressed and the full domain ...............
+    ivec2 compSize = textureSize(fullTexelIndex,        0 ) ;
+    ivec2 fullSize = textureSize(compressedTexelIndex,  0 ) ;
+
+    // calculate the resolution of the full domain .......................
+    ivec3 size = ivec3( fullSize.x/mx , fullSize.y/my, mx*my ) ;
+
+    // get the textel position and full texel index ......................
+    ivec2 texelPos = ivec2( cc*vec2(compSize) ) ; 
+    ivec4 fullTexelIndex = 
+        ivec4( texelFetch(  fullTexelIndex, texelPos, 0) ) ;
+
+    // if the texel is extra, just leave .................................
+    if ( fullTexelIndex.a != 1 ){
+        onormals = vec4(0.,0.,0.,-1.) ;
+        return ;
+    }
+
+    // 3-dimentional index of the of texel ...............................
+    ivec3 cidx = getIdx( fullTexelIndex.xy , size ) ;
+
+    // directional vectors ...............................................
+    ivec3 ii  = ivec3(1,0,0) ;
+    ivec3 jj  = ivec3(0,1,0) ;
+    ivec3 kk  = ivec3(0,0,1) ;
+
+    // secondary directions ..............................................
+    ivec3 sij = jj+kk ;     ivec3 sik = kk-jj ;
+    ivec3 sji = ii+kk ;     ivec3 sjk = kk-ii ;
+    ivec3 ski = ii+jj ;     ivec3 skj = jj-ii ;
+
+    float dii = firstDerivative(cidx, ii  ) ;
+    float djj = firstDerivative(cidx, jj  ) ;
+    float dkk = firstDerivative(cidx, kk  ) ;
+    float dij = firstDerivative(cidx, sij ) ;
+    float dik = firstDerivative(cidx, sik ) ;
+    float dji = firstDerivative(cidx, sji ) ;
+    float djk = firstDerivative(cidx, sjk ) ;
+    float dki = firstDerivative(cidx, ski ) ;
+    float dkj = firstDerivative(cidx, skj ) ;
+
+    float omega = 0.586 ;
+    
+    #define f(a)    vec3(a)
+
+    vec3 normDir = (2.*omega+1.)*(f(ii)*dii + f(jj)*djj + f(kk)*dkk) 
+        + (1.-omega)*(  f(sij)*dij + f(sik)*dik 
+                    +   f(sji)*dji + f(sjk)*djk
+                    +   f(ski)*dki + f(skj)*dkj )/sqrt(2.) ;
+    
+    vec4   normal = texelFetch(inormals, texelPos , 0 ) ;
+    onormals  = vec4( normalize(normal.xyz + normDir), 1.) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * clearTextureShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var clearTextureShader = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * clearTexture.frag    :    clear a texture -- this is used to address a
+ * bug that was interfering with the normal calculations
+ * 
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Mon 13 Sep 2021 12:45:10 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+in vec2 cc ;
+out vec4 ocolor ;
+void main(){
+    ocolor = vec4(0.) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vpeelingProjection
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var vpeelingProjection = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * 
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Wed 31 Mar 2021 19:06:52 (EDT)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform float       voxelSize ;
+uniform int         noVoxels ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform float       cutX, cutY, cutZ, cutXDir, cutYDir, cutZDir ;
+
+uniform sampler2D   compressed3dCrdt ;
+
+out vec3            ocolor ;
+
+out float           shade ;
+
+#define PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main() {
+int indx = 0 ;
+vec3 vertCrds[36] ;
+
+/* ~~~~~~~~~~~~~~~~ */
+/* Front PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 1F
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+
+// 2F
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+/* ~~~~~~~~~~~~~~~~ */
+/* RIGHT PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 3R
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+
+// 4R
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BOTTOM PLANE     */
+/* ~~~~~~~~~~~~~~~~ */
+// 5B
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 6B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+
+/* ~~~~~~~~~~~~~~~~ */
+/* LEFT PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 7L
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 8L
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* TOP PLANE        */
+/* ~~~~~~~~~~~~~~~~ */
+// 9T
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+// 10T
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BACK PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 11B
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 12B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,0) ;  // 5 
+
+
+
+    int  vertId  = gl_VertexID % 36  ; 
+    int  voxelId = gl_VertexID / 36 ;
+
+    //shade = 1.0 ;
+
+    ivec2 isize = textureSize(compressed3dCrdt,        0 ) ;
+    ivec2 voxelIndex = ivec2( voxelId % isize.x , voxelId / isize.x ) ;
+    
+    vec4 pos4 = texelFetch(compressed3dCrdt, voxelIndex, 0 ) ;
+    
+    shade =  (pos4.a > 0.5) ? 1. : 0. ;
+
+    vec3 pos =  (pos4.xyz - vec3(0.5))*2. ; 
+    vec3 ppp = pos ;
+    pos += voxelSize*0.005*2.*(vertCrds[vertId]-vec3(0.5)) ; 
+    
+    shade = shade* ( (ppp.x-cutX)*cutXDir<0. ? 1. : 0. ) ;
+    shade = shade* ( (ppp.y-cutY)*cutYDir<0. ? 1. : 0. ) ;
+    shade = shade* ( (ppp.z-cutZ)*cutZDir<0. ? 1. : 0. ) ;
+
+    ocolor = pos4.xyz;
+
+    // final vertex position .............................................
+    gl_Position = projectionMatrix
+        *viewMatrix
+        *modelMatrix
+        *vec4(pos , 1.0);
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fpeelingProjection
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fpeelingProjection = { value : `#version 300 es
+
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+layout (location=0) out vec4    outColor;
+
+in float    shade ;
+in vec3     ocolor ;
+void main() {
+    if (shade <0.5){
+       discard ;
+    }
+    outColor = vec4(ocolor,1.) ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vpeeling
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var vpeeling = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform float       voxelSize ;
+uniform int         noVoxels;
+uniform float       alpha ;
+
+uniform sampler2D   icolor ;
+
+uniform float       minValue ;
+uniform float       maxValue ;
+uniform vec4        channelMultiplier ;
+
+uniform sampler2D   wnormals ;
+uniform sampler2D   colormap ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform mat4        normalMatrix ;
+
+uniform sampler2D   compressed3dCrdt ;
+uniform sampler2D   normals ;
+uniform usampler2D  compressedTexelIndex ;
+
+uniform float       shininess ;
+uniform vec4        lightColor ;
+uniform float       lightAmbientTerm ;
+uniform float       lightSpecularTerm ;
+uniform vec3        lightDirection ;
+uniform vec4        lightAmbientColor ;
+
+uniform vec4        materialColor ;
+uniform float       materialAmbientTerm ;
+uniform float       materialSpecularTerm ;
+
+uniform float cutX, cutY, cutZ, cutXDir, cutYDir, cutZDir ;
+
+#define         PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+out float shade ;
+
+out vec4 color ;
+void main() {
+int indx = 0 ;
+vec3 vertCrds[36] ;
+
+/* ~~~~~~~~~~~~~~~~ */
+/* Front PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 1F
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+
+// 2F
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+/* ~~~~~~~~~~~~~~~~ */
+/* RIGHT PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 3R
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+
+// 4R
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BOTTOM PLANE     */
+/* ~~~~~~~~~~~~~~~~ */
+// 5B
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 6B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+
+/* ~~~~~~~~~~~~~~~~ */
+/* LEFT PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 7L
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 8L
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* TOP PLANE        */
+/* ~~~~~~~~~~~~~~~~ */
+// 9T
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+// 10T
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BACK PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 11B
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 12B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,0) ;  // 5 
+
+
+
+    int  vertId  = gl_VertexID % 36  ; 
+    int  voxelId = gl_VertexID / 36 ;
+
+    shade = 1.0 ;
+
+    ivec2 isize = textureSize(compressed3dCrdt,        0 ) ;
+    ivec2 voxelIndex = ivec2( voxelId % isize.x , voxelId / isize.x ) ;
+    
+    vec4 pos4 = texelFetch(compressed3dCrdt, voxelIndex, 0 ) ;
+
+    shade =  (pos4.a > 0.5) ? 1. : 0. ;
+
+    vec3 pos =  (pos4.xyz - vec3(0.5))*2. ; 
+    vec3 ppp = pos ;
+
+    pos += voxelSize*0.005*2.*(vertCrds[vertId]-vec3(0.5)) ; 
+    
+
+    vec4  colorin   = texelFetch(  icolor, voxelIndex, 0 ) ; 
+  
+    float val = dot(colorin,channelMultiplier) ;
+    vec4 mcolor = val < minValue ? 
+        materialColor : texture( colormap,
+            vec2((val-minValue)/(maxValue-minValue),0.5) ) ;
+
+    float trasparency = 1.0 ;
+    
+    vec3    surfaceNormal = texelFetch( normals, voxelIndex , 0).xyz ;
+
+/*------------------------------------------------------------------------
+ * processing cut-planes
+ *------------------------------------------------------------------------
+ */
+   // if ( (ppp.x-cutX)*cutXDir > 0. ){
+   //   shade = 0. ;
+   //   surfaceNormal = max(vec3(cutXDir,0.,0.),surfaceNormal) ;
+   // }
+    shade = shade* ( (ppp.x-cutX)*cutXDir<0. ? 1. : 0. ) ;
+    shade = shade* ( (ppp.y-cutY)*cutYDir<0. ? 1. : 0. ) ;
+    shade = shade* ( (ppp.z-cutZ)*cutZDir<0. ? 1. : 0. ) ;
+
+/*------------------------------------------------------------------------
+ * Lighting and coloring
+ *------------------------------------------------------------------------
+ */
+    // normal direction ..................................................
+    vec3 N = normalize( 
+            vec3( normalMatrix*texelFetch( wnormals, voxelIndex, 0 )  )) ;
+
+    #define dist    (voxelSize*0.015)
+
+
+    if ( length(ppp.x - cutX)<(dist)) {
+        surfaceNormal = vec3(1,0.,0.)*cutXDir ;
+        N = surfaceNormal ;
+    }
+    if ( length(ppp.y - cutY)<(dist) ){
+        surfaceNormal = vec3(0.,1.,0.)*cutYDir ;
+        N = surfaceNormal ;
+    }
+    if ( length(ppp.z - cutZ)<(dist) ){
+        surfaceNormal = vec3(0.,0.,1.)*cutZDir ;
+        N = surfaceNormal ;
+    }
+
+    if (val < minValue){
+        if ( length(surfaceNormal)<0.99 ){
+            trasparency = 0. ;
+            shade = 0. ;
+        }else{
+            trasparency = alpha ;
+            mcolor = materialColor ;
+        }
+    }
+
+    N = (modelMatrix*vec4(N,1.)).xyz ;
+
+    // eye vector ........................................................
+    vec3 E = normalize(-(viewMatrix*modelMatrix*vec4(pos,1.)).xyz) ;
+
+    // light direction ...................................................
+    vec3 L = normalize(lightDirection) ;
+
+    // reflection direction ..............................................
+    vec3 R = reflect(L,N) ;
+    float lambertTerm = dot(N,-L) ;
+
+    // AmbientTerm .......................................................
+    vec4 Ia = v4(lightAmbientTerm) * v4(materialAmbientTerm);
+
+    // Diffuse ...........................................................
+    vec4 Id = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // SpecularTerm ......................................................
+    vec4 Is = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // calculating final color ...........................................
+    if (lambertTerm > 0.0) {
+      Id = lightColor * mcolor * lambertTerm;
+      float specular = pow( max(dot(R, E), 0.0), shininess);
+      Is = v4(lightSpecularTerm) *v4(materialSpecularTerm) 
+          * specular ;
+    }
+
+    // Final fargment color takes into account all light values that
+    // were computed within the fragment shader
+    color = vec4(vec3(Ia + Id + Is), trasparency);
+
+    // final vertex position .............................................
+    gl_Position = projectionMatrix
+        *viewMatrix
+        *modelMatrix
+        *vec4(pos , 1.0);
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fpeeling
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fpeeling = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+#define MAX_DEPTH 99999.0
+
+uniform sampler2D uDepth;
+uniform sampler2D uFrontColor;
+
+in vec4 color ;
+in float shade ;
+
+// RG32F, R - negative front depth, G - back depth
+layout(location=0) out vec2 depth;  
+layout(location=1) out vec4 frontColor;
+layout(location=2) out vec4 backColor;
+
+void main() {
+
+    if (shade<0.5){
+        discard ;
+    }
+    // -------------------------
+    // dual depth peeling
+    // -------------------------
+    float   fragDepth       = gl_FragCoord.z;   // 0 - 1
+
+    ivec2   fragCoord       = ivec2(gl_FragCoord.xy);
+    vec2    lastDepth       = texelFetch(uDepth, fragCoord, 0).rg;
+    vec4    lastFrontColor  = texelFetch(uFrontColor, fragCoord, 0);
+
+    // depth value always increases
+    // so we can use MAX blend equation
+    depth.rg = vec2(-MAX_DEPTH);
+
+    // front color always increases
+    // so we can use MAX blend equation
+    frontColor = lastFrontColor;
+
+    // back color is separately blend afterwards each pass
+    backColor = vec4(0.0);
+
+    float nearestDepth = - lastDepth.x;
+    float furthestDepth = lastDepth.y;
+    float alphaMultiplier = 1.0 - lastFrontColor.a;
+
+    if (fragDepth < nearestDepth || fragDepth > furthestDepth) {
+        // Skip this depth since it's been peeled.
+        return;
+    }
+
+    if (fragDepth > nearestDepth && fragDepth < furthestDepth) {
+        // This needs to be peeled.
+        // The ones remaining after MAX blended for 
+        // all need-to-peel will be peeled next pass.
+        depth.rg = vec2(-fragDepth, fragDepth);
+        return;
+    }
+
+    // -------------------------------------------------------------------
+    // If it reaches here, it is the layer we need to render for this pass
+    // -------------------------------------------------------------------
+    if (fragDepth == nearestDepth) {
+        frontColor.rgb += color.rgb * color.a * alphaMultiplier;
+        frontColor.a = 1.0 - alphaMultiplier * (1.0 - color.a);
+    } else {
+        backColor += color;
+    }
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vquad
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var vquad = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+layout(location=0) in vec4 aPosition;
+
+void main() {
+    gl_Position = aPosition;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fbackBlend
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fbackBlend = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform sampler2D uBackColor;
+
+out vec4 fragColor;
+void main() {
+    fragColor = texelFetch(uBackColor, ivec2(gl_FragCoord.xy), 0);
+    if (fragColor.a == 0.0) { 
+        discard;
+    }
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * ffinal
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var ffinal = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform sampler2D uFrontColor;
+uniform sampler2D uBackColor;
+
+out vec4 fragColor;
+void main() {
+    ivec2   fragCoord   = ivec2(gl_FragCoord.xy);
+    vec4    frontColor  = texelFetch(uFrontColor, fragCoord, 0);
+    vec4    backColor   = texelFetch(uBackColor, fragCoord, 0);
+    float   alphaMultiplier = 1.0 - frontColor.a;
+
+    fragColor = vec4(
+            frontColor.rgb + alphaMultiplier * backColor.rgb,
+            frontColor.a + backColor.a
+    ) ;
+}` } ;
+
 
 function getColormapList(){
 	 return [
@@ -13282,8 +14253,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.9.02' ;
-var updateTime = 'Tue 16 Aug 2022 18:44:08 (EDT)' ;
+var version = 'v6.9.03' ;
+var updateTime = 'Mon 09 Jul 2023 11:37:28 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -22058,6 +23029,881 @@ class StructureFromJSON{
 
 }
 
+//var fpeelingProjection = { value : source('fpeelingProjection' ) } ;
+//var vpeelingProjection = { value : source('vpeelingProjection' ) } ;
+//var fpeeling    = { value : source( 'fpeeling'  ) } ;
+//var vpeeling    = { value : source( 'vpeeling'  ) } ;
+//
+//var fbackBlend  = { value : source( 'fbackBlend') } ;
+//var ffinal      = { value : source( 'ffinal'    ) } ;
+//
+
+/*========================================================================
+ * VoxelizedVisualizer
+ *========================================================================
+ */
+class DeepVoxelizer{
+    constructor(opts){
+        this._input             = opts?.input   ?? null ; 
+        this._input             = opts?.target  ?? this._input ;
+
+        if (!this.input ){
+            throw(  "DeepVoxelizer Error: "+
+                    "You need to provide a texture to be visualized") ;
+        }
+
+        this._canvas            = opts?.canvas  ?? null ;
+        if (!this.canvas){
+            throw(  "DeeepVoxelizer Error: "+
+                    "You need to provide a canvas to draw on!") ;
+        }
+        
+        this._structure         = opts?.structure ?? null ;
+        
+        if( !this.structure){
+            throw(  "DeepVoxelizer Error: "+
+                    "You need to provide a structure for visualization" ) ;
+        }
+
+        this._channel           = opts?.channel     ?? 'r'  ;
+        this._alpha             = opts?.alpha       ?? 1. ;
+        this._noPasses          = opts?.noPasses    ?? 1 ;
+
+        this._channelMultipliers = {
+            r : [ 1.,0.,0.,0. ] , 
+            g : [ 0.,1.,0.,0. ] ,
+            b : [ 0.,0.,1.,0. ] ,
+            a : [ 0.,0.,0.,1. ] } ;
+
+        this._channels          = Object.keys( this._channelMultipliers ) ;
+        
+        this._voxelSize         = opts?.voxelSize   ?? 2. ;
+
+        this._minValue          = opts?.minValue    ?? 0. ;
+        this._maxValue          = opts?.maxValue    ?? 1. ;
+
+        this._rotation          = opts?.rotation    ?? [0.,0.,0.] ;
+        this._translation       = opts?.translation ?? [0.,0.,0.] ;
+        this._scaling           = opts?.scaling     ?? [1.,1.,1.] ;
+
+        // near and far end of view frustrum .............................
+        this._near              = opts?.near        ?? 0.01 ;
+        this._far               = opts?.far         ?? 100. ;
+
+        // vertical field of view in radians .............................
+        this._fovy              = opts?.fovy        ?? 1.0 ;
+
+        // aspect ration of the view frustrum (width/height) .............
+        this._aspect            = opts?.aspect      ?? 1.0 ;
+
+        // view properties (eye location, center of the view and up
+        // direction .....................................................
+        this._eye               = opts?.eye         ?? [0.,0.,-1] ;
+        this._center            = opts?.center      ?? [0.,0.,0.] ;
+        this._up                = opts?.up          ?? [0.,1.,0.] ;
+
+        this._colormap          = new Colormap() ;
+        
+        // lighting properties ...........................................
+        this._clearColor        = opts?.clearColor  ?? [1,1,1,1] ;
+        this._lightColor        = opts?.lightColor  ?? [1,1,1,1] ;
+        this._lightAmbientTerm  = opts?.lightAmbientTerm ?? 0. ;
+        this._lightSpecularTerm = opts?.lightSpecularTerm ?? 1. ;
+        this._lightDirection    = opts?.lightDirection ?? [0.6,0.25,-0.66];
+
+        // surface properties ............................................
+        this._shininess         = opts?.shininess   ?? 10.0 ;
+        this._materialColor     = opts?.materialColor ?? 
+            [.97,.97,0.97,1.] ;
+        this._materialAmbientTerm= opts?.materialAmbientTerm ?? 1.9 ;
+        this._materialSpecularTerm = opts?.materialSpecularTerm ?? 0.8 ;
+
+        // cut planes ....................................................
+        this._cutX      = 1. ;
+        this._cutY      = 1. ;
+        this._cutZ      = 1. ;
+        this._cutXDir   = 1. ;
+        this._cutYDir   = 1. ;
+        this._cutZDir   = 1. ;
+
+        
+        // normal, projection, and view matrices .........................
+        this.modelMatrix        = mat4.create() ;
+        this.projectionMatrix   = mat4.create() ;
+        this.viewMatrix         = mat4.create() ;
+        this.normalMatrix       = mat4.create() ;
+
+        // initialize the matrices .......................................
+        this.initializeMatrices() ;
+
+        // setup the orbital camera controller ...........................
+        this.controler = new OrbitalCameraControl( this.viewMatrix,
+                5., this.canvas )  ;
+
+/*------------------------------------------------------------------------
+ * dual-depth peeling and blending textures and targets
+ *------------------------------------------------------------------------
+ */
+        this.f_depth = new Float32Texture( this.width, this.height ) ; 
+        this.s_depth = new Float32Texture( this.width, this.height ) ; 
+
+        // Front color textures for peeling
+        this.f_front = new Float32Texture( this.width, this.height ) ; 
+        this.s_front = new Float32Texture( this.width, this.height ) ; 
+        
+        // Back color textures for peeling
+        this.f_back  = new Float32Texture( this.width, this.height ) ;
+        this.s_back  = new Float32Texture( this.width, this.height ) ;
+        
+        // Blending texture
+        this.blend   = new Float32Texture( this.width, this.height ) ;
+        
+        // detpth targets 
+        this.fDepthTargets = new DrawTargets( [ this.f_depth ] ) ;
+        this.sDepthTargets = new DrawTargets( [ this.s_depth ] ) ;
+        
+        // front and back targets
+        this.fColorTargets = new DrawTargets( 
+                [ this.f_front, this.f_back ] ) ;
+        this.sColorTargets = new DrawTargets( 
+                [ this.s_front, this.s_back ] ) ;
+        // blending targets
+        this.blendTargets  = new DrawTargets( [ this.blend ] ) ;
+
+/*------------------------------------------------------------------------
+ * SOLVER DEFINITIONS
+ *------------------------------------------------------------------------
+ */
+        this.ccolor         = new Float32Texture(1,1) ;
+        this.clearTexture   = new Solver({
+            fragmentShader : clearTextureShader ,
+            targets : {
+                ocolor : { location : 0, target : this.ccolor } ,
+            }
+        } ) ;
+
+        // wave normals --------------------------------------------------
+        this.wnormals   = new Float32Texture( this.swidth, this.sheight ) ;
+        this.normalizer = new Solver({
+            fragmentShader : wavefrontNormal,
+            uniforms : {
+                mx : { type : 'i' , value : this.mx } ,
+                my : { type : 'i' , value : this.my } ,
+                icolor : { 
+                    type : 's', value : this.input } ,
+                inormals : { 
+                    type : 's', value : this.normals } ,
+                fullTexelIndex : { 
+                    type : 's', value : this.fullTexelIndex 
+                } ,
+                compressedTexelIndex : { 
+                    type : 's', value : this.compressedTexelIndex
+                } ,
+            } ,
+            targets : { 
+                normals : { location : 0 , target : this.wnormals } ,
+            } ,
+        } ) ;
+
+/*------------------------------------------------------------------------
+ * f-s peel steps
+ *------------------------------------------------------------------------
+ */
+        this.f_peel = new Solver({
+            fragmentShader  : fpeeling,
+            vertexShader    : vpeeling,
+            uniforms        : this.peelUniforms( this.f_depth, this.f_front ) ,
+            targets         : this.peelTargets( this.s_depth, this.s_front, this.s_back ) ,
+            blendEquation   : new BlendEquation('max') ,
+            blend : true ,
+            clear : false ,
+            cullFacing : true ,
+            cullFace : 'back',
+            geometry : {} ,
+            draw : new DrawArrays( 'triangles', 0, 36*this.noVoxels) 
+        } ) ;
+        
+        this.s_peel = new Solver({
+            fragmentShader  : fpeeling,
+            vertexShader    : vpeeling,
+            uniforms        : this.peelUniforms( this.s_depth, this.s_front ) ,
+            targets         : this.peelTargets( this.f_depth, this.f_front, this.f_back ) ,
+            blendEquation   : new BlendEquation('MAX') ,
+            blend : true ,
+            clear : false ,
+            cullFacing : true ,
+            cullFace : 'back',
+            geometry : {} ,
+            draw : new DrawArrays( 'triangles', 0, 36*this.noVoxels) 
+        } ) ;
+
+/*------------------------------------------------------------------------
+ * f-s backBlend 
+ *------------------------------------------------------------------------
+ */
+        this.f_backBlend = new Solver({
+            fragmentShader : fbackBlend ,
+            uniforms : { 
+               uBackColor : { type : 't', value : this.s_back } ,
+            } ,
+            targets : {
+                fragColor : { location : 0 , target : this.blend } ,
+            } ,
+            clear         : false ,
+            blend         : true , 
+            blendEquation : new BlendEquation('FUNC_ADD') ,
+            blendFunction : 
+                new BlendFunctionSeparate(
+                    'SRC_ALPHA', 'ONE_MINUS_SRC_ALPHA', 
+                    'ONE', 'ONE_MINUS_SRC_ALPHA' ) ,
+        } ) ;
+        
+        this.s_backBlend = new Solver({
+            fragmentShader : fbackBlend ,
+            uniforms : { 
+               uBackColor : { type : 't', value : this.f_back } ,
+            } ,
+            targets : {
+                fragColor : { location : 0 , target : this.blend } ,
+            } ,
+            clear         : false ,
+            blend         : true , 
+            blendEquation : new BlendEquation('FUNC_ADD') ,
+            blendFunction : 
+                new BlendFunctionSeparate(
+                    'SRC_ALPHA', 'ONE_MINUS_SRC_ALPHA', 
+                    'ONE', 'ONE_MINUS_SRC_ALPHA' ) ,
+        } ) ;
+        
+/*------------------------------------------------------------------------
+ * finalBlend
+ *------------------------------------------------------------------------
+ */
+        this.finalBlend = new Solver({
+            fragmentShader : ffinal ,
+            uniforms : { 
+                uFrontColor : { type : 't', value : this.f_front } ,
+                uBackColor  : { type : 't', value : this.blend   } ,
+            } ,
+            canvas          : this.canvas ,
+            clearColorValue : [1,1,1,1],
+            clear           : true ,
+            blend           : true ,
+            blendEquation   : 
+                new BlendEquation( 'func_add' ) ,
+            blendFunction   : 
+                new BlendFunction( 'ONE', 'ONE_MINUS_SRC_ALPHA') ,
+        } ) ;
+/*------------------------------------------------------------------------
+ * coordinate projection
+ *------------------------------------------------------------------------
+ */
+        this.projectedCoordinates 
+            = new Float32Texture(this.width, this.height) ;
+        this.depthTexture = new DepthTexture( this.width, this.height) ;
+        this.crdProjectionTargets = new DrawTargets( [this.projectedCoordinates ] ) ;
+        this.crdProjector = new Solver({
+            fragmentShader  : fpeelingProjection ,
+            vertexShader    : vpeelingProjection ,
+            uniforms : {
+                voxelSize : {type : 'f', value : this.voxelSize}, 
+                noVoxels : { type : 'i', value : this.noVoxels } ,
+                compressed3dCrdt : { type : 't', value : this.compressed3dCrdt } ,
+                projectionMatrix : { type : 'mat4', value : this.projectionMatrix } ,
+                modelMatrix : { type : 'mat4', value : this.modelMatrix } ,
+                viewMatrix : { type : 'mat4', value : this.viewMatrix } ,
+                cutX : { type : 'f', value : this.cutX} , 
+                cutY : { type : 'f', value : this.cutY} , 
+                cutZ : { type : 'f', value : this.cutZ} , 
+                cutXDir : { type : 'f', value : this.cutXDir} , 
+                cutYDir : { type : 'f', value : this.cutYDir} , 
+                cutZDir : { type : 'f', value : this.cutZDir} , 
+            } ,
+            geometry : {},
+            draw    :  new Abubu.DrawArrays(
+                        'triangles', 0, 36*this.noVoxels) ,
+            depthTexture : this.depthTexture ,
+            depthTest : true , /* this is important to properly 
+                              test depth of voxels to ensure the correct
+                              ones are displayed on screen  */
+            cullFaing: false ,
+            cullFace : 'back' ,
+            //canvas: canvas_2 ,
+            targets : {
+                outColor : { location : 0 , 
+                               target : this.projectedCoordinates }
+            }
+        } ) ;
+
+/*------------------------------------------------------------------------
+ * 
+ *------------------------------------------------------------------------
+ */
+        this.updateModelviewMatrices() ;
+
+    } // END OF CONSTRUCTOR ----------------------------------------------
+
+/*------------------------------------------------------------------------
+ * getters
+ *------------------------------------------------------------------------
+ */
+    get input(){                return this._input                      } 
+    get target(){               return this._input                      }
+
+    // draw related ......................................................
+    get canvas(){               return this._canvas                     } 
+    get width(){                return this.canvas.width                } 
+    get height(){               return this.canvas.height               } 
+
+    get voxelSize(){            return this._voxelSize                  }
+
+    // structural getters ................................................
+    get structure(){            return this._structure                  } 
+
+    get fullTexelIndex(){       return this.structure.fullTexelIndex    }
+    get compressedTexelIndex(){ return this.structure.compressedTexelIndex}
+    get full3dCrdt(){           return this.structure.full3dCrdt        }
+    get compressed3dCrdt(){     return this.structure.compressed3dCrdt  }
+    get normals(){              return this.structure.normals           }
+
+    get mx(){                   return this.structure.mx                }
+    get my(){                   return this.structure.my                }
+
+    get swidth(){               return this.structure.width             }
+    get sheight(){              return this.structure.height            }
+    get noVoxels(){             return this.swidth*this.sheight         }
+
+    // view related ......................................................
+    get alpha(){                return this._alpha ;                    }
+    get noPasses(){             return this._noPasses ;                 } 
+    get voxelSize(){            return this._voxelSize ;                }
+    
+    get translation(){          return this._translation ;              } 
+    get rotation(){             return this._rotation ;                 }
+    get scaling(){              return this._scaling ;                  }
+
+    get near(){                 return this._near ;                     }
+    get far(){                  return this._far;                       }
+    get fovy(){                 return this._fovy ;                     }
+    get aspect(){               return this._aspect ;                   }
+
+    get eye(){                  return this._eye ;                      }
+    get center(){               return this._center ;                   }
+    get up(){                   return this._up ;                       }
+
+    get shininess(){            return this._shininess                  } 
+    get clearColor(){           return this._clearColor                 } 
+    get lightColor(){           return this._lightColor                 } 
+    get lightAmbientTerm(){     return this._lightAmbientTerm           }
+    get lightSpecularTerm(){    return this._lightSpecularTerm          }
+    get lightDirection(){       return this._lightDirection             }
+    get materialColor(){        return this._materialColor              }
+    get materialAmbientTerm(){  return this._materialAmbientTerm        }
+    get materialSpecularTerm(){ return this._materialSpecularTerm       }
+
+    get cutX(){ return this._cutX } ;
+    get cutY(){ return this._cutY } ;
+    get cutZ(){ return this._cutZ } ;
+    get cutXDir(){ return this._cutXDir } ;
+    get cutYDir(){ return this._cutYDir } ;
+    get cutZDir(){ return this._cutZDir } ;
+
+    get minValue(){             return this._minValue ;                 } 
+    get maxValue(){             return this._maxValue ;                 } 
+    get colormap(){             return this._colormap.name ;            }
+    get colormaps(){            return this._colormap.list              } 
+    get colormapTexture(){      return this._colormap.texture ;         }
+    get channel(){              return this._channel ;                  } 
+
+    get channelMultiplier(){ 
+        return this._channelMultipliers[this.channel] ;                 } 
+/*------------------------------------------------------------------------
+ * setters
+ *------------------------------------------------------------------------
+ */
+    // -------------------------------------------------------------------
+    set alpha(v){
+        this.setPeelUniform('alpha', v) ;
+    }
+    // -------------------------------------------------------------------
+    set noPasses(v){
+        this._noPasses = v ;
+    }
+    // -------------------------------------------------------------------
+    set voxelSize(v){
+        this.setPeelUniform('voxelSize', v) ;
+        this.crdProjector.uniforms.voxelSize.value = v ;
+    }
+    // -------------------------------------------------------------------
+    set minValue(v){
+        this.setPeelUniform('minValue', v) ;
+    }
+    // -------------------------------------------------------------------
+    set maxValue(v){
+        this.setPeelUniform('maxValue', v) ;
+    }
+    // -------------------------------------------------------------------
+    set shininess(v){
+        this.setPeelUniform('shininess', v) ;
+    }
+    // -------------------------------------------------------------------
+    set lightAmbientTerm(v){
+        this.setPeelUniform('lightAmbientTerm',v) ;
+    }
+    // -------------------------------------------------------------------
+    set lightSpecularTerm(v){
+        this.setPeelUniform('lightSpecularTerm',v) ;
+    }
+    // -------------------------------------------------------------------
+    set materialAmbientTerm(v){
+        this.setPeelUniform('materialAmbientTerm',v) ;
+    }
+    // -------------------------------------------------------------------
+    set materialSpecularTerm(v){
+        this.setPeelUniform('materialSpecularTerm',v) ;
+    }
+    // -------------------------------------------------------------------
+    set lightColor(v){
+        this.setPeelUniform('lightColor',v) ;
+    }
+    // -------------------------------------------------------------------
+    set materialColor(v){
+        this.setPeelUniform('materialColor',v) ;
+    }
+    // -------------------------------------------------------------------
+    set lightDirection(v){
+        this.setPeelUniform('lightDirection',v) ;
+    }
+    // -------------------------------------------------------------------
+    set cutX(v){
+        this.setPeelUniform('cutX', v) ;
+        this.crdProjector.uniforms.cutX.value = v ;
+    }
+    // -------------------------------------------------------------------
+    set cutY(v){
+        this.setPeelUniform('cutY', v) ;
+        this.crdProjector.uniforms.cutY.value = v ;
+    }
+    // -------------------------------------------------------------------
+    set cutZ(v){
+        this.setPeelUniform('cutZ', v) ;
+        this.crdProjector.uniforms.cutZ.value = v ;
+    }
+    // -------------------------------------------------------------------
+    set cutXDir(v){
+        this.setPeelUniform('cutXDir', v) ;
+        this.crdProjector.uniforms.cutXDir.value = v ;
+    }
+    // -------------------------------------------------------------------
+    set cutYDir(v){
+        this.setPeelUniform('cutYDir', v) ;
+        this.crdProjector.uniforms.cutYDir.value = v ;
+    }
+    // -------------------------------------------------------------------
+    set cutZDir(v){
+        this.setPeelUniform('cutZDir', v) ;
+        this.crdProjector.uniforms.cutZDir.value = v ;
+    }
+    // -------------------------------------------------------------------
+    set channel(nc){
+        this._channel = nc ;
+        this.f_peel.uniforms.channelMultiplier.value = 
+            this.channelMultiplier ;
+        this.s_peel.uniforms.channelMultiplier.value = 
+            this.channelMultiplier ;
+    }
+
+    // -------------------------------------------------------------------
+    set colormap(nv){
+        this._colormap.name = nv ;
+        this.f_peel.uniforms.colormap.value = this.colormapTexture ;
+        this.s_peel.uniforms.colormap.value = this.colormapTexture ;
+    }
+    // -------------------------------------------------------------------
+    set translation(nv){
+        this._translation = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    // -------------------------------------------------------------------
+    set rotation(nv){
+        this._rotation = nv ;
+        this.updateModelviewMatrices() ;
+        console.log(this.rotation) ;
+    }
+    // -------------------------------------------------------------------
+    set scaling(nv){
+        this._scaling = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    // -------------------------------------------------------------------
+    set near(nv){
+        this._near = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    // -------------------------------------------------------------------
+    set far(nv){
+        this._far = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    // -------------------------------------------------------------------
+    set fovy(nv){
+        this._fovy = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    // -------------------------------------------------------------------
+    set aspect(nv){
+        this._aspcet = nv ;
+        this.updateModelviewMatrices() ;
+    }
+    // -------------------------------------------------------------------
+    set eye(nv){
+        this._eye = nv ;
+        this.initViewMatrix() ;
+        this.updateViewMatrix() ;
+    }
+    // -------------------------------------------------------------------
+    set center(nv){
+        this._center = nv ;
+        this.initViewMatrix() ;
+        this.updateViewMatrix() ;
+    }
+    // -------------------------------------------------------------------
+    set up(nv){
+        this._up = nv ;
+        this.initViewMatrix() ;
+        this.updateViewMatrix() ;
+    }
+
+/*------------------------------------------------------------------------
+ * setPeelUniform 
+ *------------------------------------------------------------------------
+ */
+    setPeelUniform(name, val){
+        this["_"+name] = val ;
+        this.f_peel.uniforms[name].value = val ;
+        this.s_peel.uniforms[name].value = val ;
+    }
+
+/*------------------------------------------------------------------------
+ * peelUniforms
+ *------------------------------------------------------------------------
+ */
+    peelUniforms(uDepth, uFrontColor){
+        let uniforms = {} ;
+        let floats = [  
+            'alpha', 'shininess',
+            'lightAmbientTerm', 'lightSpecularTerm',
+            'materialAmbientTerm','materialSpecularTerm', 
+            'voxelSize', 
+            'cutX', 'cutY','cutZ', 'cutXDir', 'cutYDir', 'cutZDir'  ] ;
+        let mat4s = [
+            'projectionMatrix', 
+            'modelMatrix', 'viewMatrix','normalMatrix' ] ;
+        let vec4s = [ 'lightColor', 'materialColor' ] ;
+        let vec3s = [ 'lightDirection' ] ;
+        let ints  = [ 'noVoxels' ] ;
+
+        uniforms.uDepth     = { type : 't', value : uDepth      } ;
+        uniforms.uFrontColor= { type : 't', value : uFrontColor } ;
+        uniforms.compressed3dCrdt =  { type : 's', value : this.compressed3dCrdt } ;
+        uniforms.icolor     = { type : 's', value : this.input } ;
+        uniforms.wnormals   = { type : 's', value : this.wnormals } ;
+        uniforms.normals    = { type : 's', value : this.normals } ;
+        uniforms.colormap   = { type : 't', value : this.colormapTexture } ;
+        
+        uniforms.minValue = { type : 'f', value : 0.1 } ;
+        uniforms.maxValue = { type : 'f', value : 1.0 } ;
+        uniforms.channelMultiplier  = { type : 'v4', value : [1,0,0,0] } ;
+
+        for(let v of floats)
+            uniforms[v] = { type : 'f' ,    value : this[v] } ;
+        for(let v of mat4s)
+            uniforms[v] = { type : 'mat4',  value : this[v] } ;
+        for(let v of vec4s)
+            uniforms[v] = { type : 'v4',    value : this[v] } ;
+        for(let v of vec3s)
+            uniforms[v] = { type : 'v3',    value : this[v] } ;
+        for(let v of ints)
+            uniforms[v] = { type : 'i',     value : this[v] } ;
+
+        return uniforms ;
+    }
+
+/*------------------------------------------------------------------------
+ * peelTargets
+ *------------------------------------------------------------------------
+ */
+    peelTargets( depth, frontColor, backColor ){
+        let targets = {} ;
+        targets.depth      = { location :0 , target : depth        } ;
+        targets.frontColor = { location :1 , target : frontColor   } ;
+        targets.backColor  = { location :2 , target : backColor    } ;
+        return targets ;
+    }
+
+/*------------------------------------------------------------------------
+ * initViewMatrix 
+ *------------------------------------------------------------------------
+ */
+    initializeMatrices(){
+        mat4.identity( this.projectionMatrix    ) ;
+        mat4.identity( this.modelMatrix         ) ;
+        mat4.identity( this.viewMatrix          ) ;
+        mat4.identity( this.normalMatrix        ) ;
+        mat4.lookAt(    this.viewMatrix, this.eye, this.center, this.up );
+
+    }
+
+/*------------------------------------------------------------------------
+ * initViewMatrix
+ *------------------------------------------------------------------------
+ */
+    initViewMatrix(){
+        mat4.identity(  this.viewMatrix                                 );
+        mat4.lookAt(    this.viewMatrix, this.eye, this.center, this.up );
+    }
+
+/*------------------------------------------------------------------------ 
+ * updateModelviewMatrices
+ *------------------------------------------------------------------------
+ */
+    updateModelviewMatrices(){
+        mat4.identity( 
+                this.projectionMatrix ) ;
+        mat4.perspective( 
+                this.projectionMatrix , 
+                this.fovy, this.aspect, 
+                this.near, this.far ) ;
+
+        mat4.identity(  this.modelMatrix ) ;
+        mat4.scale(     
+                this.modelMatrix, 
+                this.modelMatrix, 
+                this.scaling ) ;
+
+        mat4.rotate(    this.modelMatrix, this.modelMatrix, 
+                this.rotation[0], [1,0,0] ) ;
+        mat4.rotate(    this.modelMatrix, this.modelMatrix,
+                this.rotation[1], [0,1,0] ) ;
+        mat4.rotate(    this.modelMatrix, this.modelMatrix,
+                this.rotation[2], [0,0,1] ) ;
+
+        mat4.translate( this.modelMatrix, this.modelMatrix, 
+                this.translation ) ;
+
+        this.updateNormalMatrix() ;
+        
+        this.f_peel.uniforms.modelMatrix.value = this.modelMatrix ;
+        this.f_peel.uniforms.projectionMatrix.value 
+            = this.projectionMatrix ;
+
+        this.s_peel.uniforms.modelMatrix.value = this.modelMatrix ;
+        this.s_peel.uniforms.projectionMatrix.value 
+            = this.projectionMatrix ;
+
+        this.crdProjector.uniforms.modelMatrix.value = this.modelMatrix ;
+        this.crdProjector.uniforms.projectionMatrix.value 
+            = this.projectionMatrix ;
+
+    }
+
+/*------------------------------------------------------------------------
+ * updateViewMatrix
+ *------------------------------------------------------------------------
+ */
+    updateViewMatrix(){
+        this.controller.update() ;
+        this.f_peel.uniforms.viewMatrix.value = this.viewMatrix ;
+        this.s_peel.uniforms.viewMatrix.value = this.viewMatrix ;
+        this.crdProjector.uniforms.viewMatrix.value = this.viewMatrix ;
+    }
+
+/*------------------------------------------------------------------------
+ * updateNormalMatrix
+ *------------------------------------------------------------------------
+ */
+    updateNormalMatrix(){
+        mat4.multiply(  this.normalMatrix, 
+                this.viewMatrix, this.modelMatrix) ; 
+        mat4.invert(    this.normalMatrix , this.normalMatrix ) ;
+        mat4.transpose( this.normalMatrix , this.normalMatrix ) ;
+        this.f_peel.uniforms.normalMatrix.value = this.normalMatrix ;
+        this.s_peel.uniforms.normalMatrix.value = this.normalMatrix ;
+    }
+
+/*------------------------------------------------------------------------
+ * calcNormals
+ *------------------------------------------------------------------------
+ */
+    calcNormals(){
+        this.normalizer.render() ;
+        this.clearTexture.render() ;
+    }
+
+/*------------------------------------------------------------------------
+ * render 
+ *------------------------------------------------------------------------
+ */
+    render(){
+        this.calcNormals() ;
+
+        this.controler.update() ;
+
+        mat4.multiply(  this.normalMatrix, 
+            this.viewMatrix, this.modelMatrix     ) ;
+        mat4.invert(    this.normalMatrix, 
+            this.normalMatrix                    ) ;
+        mat4.transpose( this.normalMatrix, 
+            this.normalMatrix                    ) ;
+
+        this.f_peel.uniforms.viewMatrix.value = this.viewMatrix ;
+        this.f_peel.uniforms.normalMatrix.value = this.normalMatrix ;
+            
+        this.s_peel.uniforms.viewMatrix.value = this.viewMatrix ;
+        this.s_peel.uniforms.normalMatrix.value = this.normalMatrix ;
+   
+        let NUM_PASS  = this.noPasses ; 
+        let DEPTH_CLEAR_VALUE = -99999.0;
+        let MAX_DEPTH = 1.0;
+        let MIN_DEPTH = 0.0;
+        this.sDepthTargets.clear( -MIN_DEPTH, MAX_DEPTH, 0, 0) ;
+        this.fDepthTargets.clear( 
+                DEPTH_CLEAR_VALUE, DEPTH_CLEAR_VALUE, 0, 0) ;
+
+        this.fColorTargets.clear(0,0,0,0) ;
+        this.sColorTargets.clear(0,0,0,0) ;
+        this.blendTargets.clear(0,0,0,0) ;
+
+        this.s_peel.render() ;
+        this.s_backBlend.render() ;
+
+        for(let pass =0 ; pass < NUM_PASS ; pass++){
+            this.sColorTargets.clear(0,0,0,0) ;
+            this.sDepthTargets.clear(
+                DEPTH_CLEAR_VALUE, DEPTH_CLEAR_VALUE, 0, 0) ;
+            
+            this.f_peel.render() ;
+            this.f_backBlend.render() ;
+
+            this.fColorTargets.clear(0,0,0,0) ;
+            this.fDepthTargets.clear(DEPTH_CLEAR_VALUE, DEPTH_CLEAR_VALUE, 0, 0) ;
+            
+            this.s_peel.render() ;
+            this.s_backBlend.render() ;
+        }
+        this.finalBlend.render() ;
+    }
+/*------------------------------------------------------------------------
+ * projectCoordinates
+ *------------------------------------------------------------------------
+ */
+    projectCoordinates(){
+        this.crdProjector.uniforms.viewMatrix.value = this.viewMatrix ;
+        this.crdProjectionTargets.clear(0,0,0,0) ;
+        this.crdProjector.render() ;
+    }
+/*------------------------------------------------------------------------
+ * controlByGui(gelem)
+ *------------------------------------------------------------------------
+ */
+    controlByGui(gelem){
+        //
+        // local addVectorToGui ..........................................
+        function addVectorToGui(guiElem, obj, param , opts){
+            let elems = [] ;
+            let labels = opts?.labels ?? 'XYZW' ;
+
+            for (var i=0 ; i< obj[param].length ; i++){
+                elems.push(guiElem.add( obj[param] , i.toString() )
+                        .name( param + ' ' + labels[i] ) );
+                elems[i].onChange( ()=>{ obj[param] = obj[param] } ) ;
+                if ( opts?.callback ){
+                    elems[i].onChange( ()=>{ 
+                            obj[param] = obj[param];
+                            opts.callback();
+                            }   ) ;
+                }
+
+                if ( opts?.min ){
+                    elems[i].min( opts.min ) ;
+                }
+                if ( opts?.max ){
+                    elems[i].max( opts.max ) ;
+                }
+                if ( opts?.step ){
+                    elems[i].step( opts.step ) ;
+                }
+
+            }
+            return elems ;
+        }
+        // modelView .....................................................
+        gelem.f_m = gelem.addFolder('Model View') ;
+        gelem.f_m.t = gelem.f_m.addFolder('Translation') ;
+        gelem.f_m.r = gelem.f_m.addFolder('Rotation') ;
+        gelem.f_m.s = gelem.f_m.addFolder('Scaling') ;
+        addVectorToGui( gelem.f_m.t , this, 'translation', 
+           {step: 0.01} ) ;
+        addVectorToGui( gelem.f_m.r , this, 'rotation', 
+           {step: 0.01} ) ;
+        addVectorToGui( gelem.f_m.s , this, 
+                'scaling', {step: 0.01} ) ;
+
+        // projection ....................................................
+        gelem.f_0 = gelem.addFolder('projection') ;
+        gelem.f_0.add( this, 'fovy' ).step(0.01).min(0.01)  ;
+        gelem.f_0.add( this, 'near' ).step(0.02).min(0.01)  ;
+        gelem.f_0.add( this, 'far'  ).step(0.02).min(0) ;
+
+        // coloring ------------------------------------------------------
+        gelem.f_c = gelem.addFolder('Coloring and lighting') ;
+
+        // lighting ......................................................
+        gelem.f_c.f_l = gelem.f_c.addFolder('Lighting') ;
+        addVectorToGui(  gelem.f_c.f_l , this, 'lightDirection', 
+           { step : 0.01 } ) ;
+        addVectorToGui(  gelem.f_c.f_l , this, 'lightColor', 
+                {labels : 'RGBA' , step : 0.01 }) ;
+
+        gelem.f_c.f_l.add( this, 'lightSpecularTerm' ).step(0.01).min(0)  ;
+        gelem.f_c.f_l.add( this, 'lightAmbientTerm' ).step(0.01).min(0)  ;
+
+        // material properties ...........................................
+        gelem.f_c.m_p =  gelem.f_c.addFolder('Material Properties') ;
+
+        addVectorToGui(  gelem.f_c.m_p , this, 'materialColor', 
+                {labels : 'RGBA' , step : 0.01 }) ;
+
+        gelem.f_c.m_p.add( this, 'materialAmbientTerm' ).step(0.01).min(0)  ;
+        gelem.f_c.m_p.add( this, 'materialSpecularTerm' ).step(0.01).min(0) ;
+        gelem.f_c.m_p.add( this, 'shininess' ).step(0.01).min(0) ;
+        
+        // cut planes ----------------------------------------------------
+        gelem.f_cp = gelem.addFolder('Cut Planes') ;
+        gelem.f_cp.add( this, 'cutX').min(-1).max(1.).step(0.01) ;
+        gelem.f_cp.add( this, 'cutY').min(-1).max(1.).step(0.01) ;
+        gelem.f_cp.add( this, 'cutZ').min(-1).max(1.).step(0.01) ;
+        gelem.f_cp.add( this, 'cutXDir', [-1,1] ) ;
+        gelem.f_cp.add( this, 'cutYDir', [-1,1] ) ;
+        gelem.f_cp.add( this, 'cutZDir', [-1,1] ) ;
+
+        // DDP Params ----------------------------------------------------
+        gelem.f_p = gelem.addFolder("DDP Params") ;
+        gelem.f_p.add( this, 'voxelSize').step(0.01).min(0.01).max(3.) ;
+        gelem.f_p.add( this, 'alpha').step(0.01).min(0.05).max(1.) ;
+        gelem.f_p.add( this, 'noPasses').step(1).min(1).max(30) ;
+        gelem.f_p.open() ;
+        gelem.f_c.f_cr = gelem.f_c.addFolder('Colormap and Range') ;
+        gelem.f_c.f_cr.add( this , 'colormap', this.colormaps ) ;
+        gelem.f_c.f_cr.add( this , 'minValue').step(0.01) ;
+        gelem.f_c.f_cr.add( this , 'maxValue').step(0.01) ;
+        gelem.f_c.f_cr.add( this , 'channel', ['r', 'g','b','a'] )
+            .name('Color channel' )  ;
+
+
+    } // end of controlByGui
+
+} // End of Deep Voxelizer
 /*========================================================================
  * SurfaceVisualizer
  *========================================================================
@@ -25350,6 +27196,7 @@ this.Plot2D              = Plot2D ;
 this.Tvsx                = Tvsx ;
 this.VolumeRayCaster     = VolumeRayCaster ;
 this.SurfaceVisualizer   = SurfaceVisualizer ;
+this.DeepVoxelizer       = DeepVoxelizer ;
 this.StructureFromJSON   = StructureFromJSON ;
 
 this.getColormapList     = getColormapList ;

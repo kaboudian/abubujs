@@ -2863,3 +2863,974 @@ void main(){
     return ;
 }` } ;
 
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * cvertex
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var cvertex = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * 
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Wed 31 Mar 2021 19:06:52 (EDT)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform float       voxelSize ;
+uniform int         noVoxels ;
+
+uniform sampler2D   icolor ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform mat4        normalMatrix ;
+
+uniform sampler2D   compressed3dCrdt ;
+uniform sampler2D   normals ;
+
+uniform float       shininess;
+uniform vec4        lightColor;
+uniform float       lightAmbientTerm;
+uniform float       lightSpecularTerm;
+uniform vec3        lightDirection;
+
+uniform float       materialAmbientTerm;
+uniform float       materialSpecularTerm;
+
+out vec4            ocolor ;
+
+out float           shade ;
+
+#define PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main() {
+    vec3 vertCrds[36] ;
+int indx = 0 ;
+vec3 vertCrds[36] ;
+
+/* ~~~~~~~~~~~~~~~~ */
+/* Front PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 1F
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+
+// 2F
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+/* ~~~~~~~~~~~~~~~~ */
+/* RIGHT PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 3R
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+
+// 4R
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BOTTOM PLANE     */
+/* ~~~~~~~~~~~~~~~~ */
+// 5B
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 6B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+
+/* ~~~~~~~~~~~~~~~~ */
+/* LEFT PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 7L
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 8L
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* TOP PLANE        */
+/* ~~~~~~~~~~~~~~~~ */
+// 9T
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+// 10T
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BACK PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 11B
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 12B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,0) ;  // 5 
+
+
+
+    int  vertId  = gl_VertexID % 36  ; 
+    int  voxelId = gl_VertexID / 36 ;
+
+    //shade = 1.0 ;
+
+    ivec2 isize = textureSize(compressed3dCrdt,        0 ) ;
+    ivec2 voxelIndex = ivec2( voxelId % isize.x , voxelId / isize.x ) ;
+    
+    vec4 pos4 = texelFetch(compressed3dCrdt, voxelIndex, 0 ) ;
+
+    shade =  (pos4.a > 0.5) ? 1. : 0. ;
+
+    vec3 pos =  (pos4.xyz - vec3(0.5))*2. ; 
+    pos += voxelSize*0.005*2.*(vertCrds[vertId]-vec3(0.5)) ; 
+
+    vec4  color   = texelFetch(  icolor, voxelIndex, 0 ) ; 
+   
+    vec4 materialColor = color.r < 0.1 ? 
+        vec4(vec3(0.8),1.) : vec4(0.,color.r,0.1,1.) ;
+
+    materialColor = mix(vec4(0.,0.,1.0,1.),vec4(1.,1.,0.,1.), color.r) ;
+
+    if (color.r < 0.1){
+         shade = shade*0. ;
+    }
+/*------------------------------------------------------------------------
+ * Lighting and coloring
+ *------------------------------------------------------------------------
+ */
+    // normal direction ..................................................
+    vec3 N = normalize( 
+            vec3( normalMatrix*texelFetch( normals, voxelIndex, 0 )  )) ;
+    
+    // eye vector ........................................................
+    vec3 E = normalize(-(viewMatrix*modelMatrix*vec4(pos,1.)).xyz) ;
+
+    // light direction ...................................................
+    vec3 L = normalize(lightDirection) ;
+
+    // reflection direction ..............................................
+    vec3 R = reflect(L,N) ;
+    float lambertTerm = dot(N,-L) ;
+
+    // AmbientTerm .......................................................
+    vec4 Ia = v4(lightAmbientTerm) * v4(materialAmbientTerm);
+
+    // Diffuse ...........................................................
+    vec4 Id = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // SpecularTerm ......................................................
+    vec4 Is = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // calculating final color ...........................................
+    if (lambertTerm > 0.0) {
+      Id = lightColor * materialColor * lambertTerm;
+      float specular = pow( max(dot(R, E), 0.0), shininess);
+      Is = v4(lightSpecularTerm) *v4(materialSpecularTerm) 
+          * specular ;
+    }
+
+    // Final fargment color takes into account all light values that
+    // were computed within the fragment shader
+    ocolor = vec4(vec3(Ia + Id + Is), 1.0);
+
+    // final vertex position .............................................
+    gl_Position = projectionMatrix
+        *viewMatrix
+        *modelMatrix
+        *vec4(pos , 1.0);
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * cfrag
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var cfrag = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+
+in float red ;
+out vec4 outColor;
+
+in float shade ;
+in vec4 ocolor ;
+void main() {
+
+    if (shade <0.5){
+       discard ;
+    }
+    outColor = ocolor ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * wavefrontNormal
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var wavefrontNormal = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * wavefrontNormal.frag     :    calculate wave front normals
+ * 
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Mon 13 Sep 2021 10:29:12 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+in vec2 cc ;
+
+uniform sampler2D   icolor ;
+uniform sampler2D   inormals ;
+uniform usampler2D  fullTexelIndex, compressedTexelIndex ;
+uniform int         mx, my ;
+
+out vec4 onormals ;
+
+/*========================================================================
+ * getIJ: return the IJ index on the full 2d-matrix
+ *========================================================================
+ */
+ivec2 getIJ(ivec3 idx, ivec3 size){
+    int si = idx.z % mx ;
+    int sj = idx.z / mx ;
+
+    return ivec2(size.x*si + idx.x, (my-1-sj)*size.y + idx.y) ;
+}
+
+/*========================================================================
+ * getIdx: get the 3d index from the IJ indices
+ *========================================================================
+ */
+ivec3 getIdx( ivec2 IJ, ivec3 size ){
+    int si = IJ.x / size.x ;
+    int sj = (my - 1) - (IJ.y/size.y) ;
+
+    return ivec3( IJ.x % size.x, IJ.y % size.y , mx*sj + si ) ;
+}
+
+bool isAbove( ivec3 idx, ivec3 size ){
+    ivec2 IJ = getIJ( idx, size ) ;
+    ivec2 ij = ivec2(texelFetch( compressedTexelIndex , IJ, 0 ).xy)  ;
+    
+    return (texelFetch(icolor, ij,0).r >= 0.1) ;
+}
+
+
+/*========================================================================
+ * macros 
+ *========================================================================
+ */
+#define isInBounds( v )     (all(greaterThanEqual(v,ivec3(0))) && \
+        all(lessThan(v,size)))
+
+#define texelInDomain(I)  ( texelFetch(compressedTexelIndex,(I),\
+            0).a==uint(1) )
+#define inDomain( v )   (texelInDomain( getIJ(v, size) )) 
+#define isAboveThreshold(v)     isAbove( v , size )
+
+#define isNotGood(v)  \
+    (!(inDomain(v) && isInBounds( v ) && isAboveThreshold(v)))
+
+//bool isNotGood( ivec3 v , ivec3 size){
+//    bool notInDomainOrBound  = !( inDomain(v) && isInBounds( v ) ) ;
+//    bool above = isAbove(v,size) ;
+//    return !above ||  ;
+//}
+
+// the flipped direction of U ensures that the normal points out of the
+// domain
+#define getU(v)         (isNotGood(v) ? 1. : 0.) 
+
+#define firstDerivative(C,D)   (getU((C)+(D))-getU((C)-(D)))  
+
+
+/*========================================================================
+ * main
+ *========================================================================
+ */
+void main(){
+    // get the sizes of the compressed and the full domain ...............
+    ivec2 compSize = textureSize(fullTexelIndex,        0 ) ;
+    ivec2 fullSize = textureSize(compressedTexelIndex,  0 ) ;
+
+    // calculate the resolution of the full domain .......................
+    ivec3 size = ivec3( fullSize.x/mx , fullSize.y/my, mx*my ) ;
+
+    // get the textel position and full texel index ......................
+    ivec2 texelPos = ivec2( cc*vec2(compSize) ) ; 
+    ivec4 fullTexelIndex = 
+        ivec4( texelFetch(  fullTexelIndex, texelPos, 0) ) ;
+
+    // if the texel is extra, just leave .................................
+    if ( fullTexelIndex.a != 1 ){
+        onormals = vec4(0.,0.,0.,-1.) ;
+        return ;
+    }
+
+    // 3-dimentional index of the of texel ...............................
+    ivec3 cidx = getIdx( fullTexelIndex.xy , size ) ;
+
+    // directional vectors ...............................................
+    ivec3 ii  = ivec3(1,0,0) ;
+    ivec3 jj  = ivec3(0,1,0) ;
+    ivec3 kk  = ivec3(0,0,1) ;
+
+    // secondary directions ..............................................
+    ivec3 sij = jj+kk ;     ivec3 sik = kk-jj ;
+    ivec3 sji = ii+kk ;     ivec3 sjk = kk-ii ;
+    ivec3 ski = ii+jj ;     ivec3 skj = jj-ii ;
+
+    float dii = firstDerivative(cidx, ii  ) ;
+    float djj = firstDerivative(cidx, jj  ) ;
+    float dkk = firstDerivative(cidx, kk  ) ;
+    float dij = firstDerivative(cidx, sij ) ;
+    float dik = firstDerivative(cidx, sik ) ;
+    float dji = firstDerivative(cidx, sji ) ;
+    float djk = firstDerivative(cidx, sjk ) ;
+    float dki = firstDerivative(cidx, ski ) ;
+    float dkj = firstDerivative(cidx, skj ) ;
+
+    float omega = 0.586 ;
+    
+    #define f(a)    vec3(a)
+
+    vec3 normDir = (2.*omega+1.)*(f(ii)*dii + f(jj)*djj + f(kk)*dkk) 
+        + (1.-omega)*(  f(sij)*dij + f(sik)*dik 
+                    +   f(sji)*dji + f(sjk)*djk
+                    +   f(ski)*dki + f(skj)*dkj )/sqrt(2.) ;
+    
+    vec4   normal = texelFetch(inormals, texelPos , 0 ) ;
+    onormals  = vec4( normalize(normal.xyz + normDir), 1.) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * clearTextureShader
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var clearTextureShader = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * clearTexture.frag    :    clear a texture -- this is used to address a
+ * bug that was interfering with the normal calculations
+ * 
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Mon 13 Sep 2021 12:45:10 (EDT)
+ * PLACE        : Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+in vec2 cc ;
+out vec4 ocolor ;
+void main(){
+    ocolor = vec4(0.) ;
+    return ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vpeelingProjection
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var vpeelingProjection = { value : `#version 300 es
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ * 
+ *
+ * PROGRAMMER   : ABOUZAR KABOUDIAN
+ * DATE         : Wed 31 Mar 2021 19:06:52 (EDT)
+ * PLACE        : Chaos Lab @ GaTech, Atlanta, GA
+ *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ */
+
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform float       voxelSize ;
+uniform int         noVoxels ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform float       cutX, cutY, cutZ, cutXDir, cutYDir, cutZDir ;
+
+uniform sampler2D   compressed3dCrdt ;
+
+out vec3            ocolor ;
+
+out float           shade ;
+
+#define PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+/*========================================================================
+ * main body of the shader
+ *========================================================================
+ */
+void main() {
+int indx = 0 ;
+vec3 vertCrds[36] ;
+
+/* ~~~~~~~~~~~~~~~~ */
+/* Front PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 1F
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+
+// 2F
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+/* ~~~~~~~~~~~~~~~~ */
+/* RIGHT PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 3R
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+
+// 4R
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BOTTOM PLANE     */
+/* ~~~~~~~~~~~~~~~~ */
+// 5B
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 6B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+
+/* ~~~~~~~~~~~~~~~~ */
+/* LEFT PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 7L
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 8L
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* TOP PLANE        */
+/* ~~~~~~~~~~~~~~~~ */
+// 9T
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+// 10T
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BACK PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 11B
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 12B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,0) ;  // 5 
+
+
+
+    int  vertId  = gl_VertexID % 36  ; 
+    int  voxelId = gl_VertexID / 36 ;
+
+    //shade = 1.0 ;
+
+    ivec2 isize = textureSize(compressed3dCrdt,        0 ) ;
+    ivec2 voxelIndex = ivec2( voxelId % isize.x , voxelId / isize.x ) ;
+    
+    vec4 pos4 = texelFetch(compressed3dCrdt, voxelIndex, 0 ) ;
+    
+    shade =  (pos4.a > 0.5) ? 1. : 0. ;
+
+    vec3 pos =  (pos4.xyz - vec3(0.5))*2. ; 
+    vec3 ppp = pos ;
+    pos += voxelSize*0.005*2.*(vertCrds[vertId]-vec3(0.5)) ; 
+    
+    shade = shade* ( (ppp.x-cutX)*cutXDir<0. ? 1. : 0. ) ;
+    shade = shade* ( (ppp.y-cutY)*cutYDir<0. ? 1. : 0. ) ;
+    shade = shade* ( (ppp.z-cutZ)*cutZDir<0. ? 1. : 0. ) ;
+
+    ocolor = pos4.xyz;
+
+    // final vertex position .............................................
+    gl_Position = projectionMatrix
+        *viewMatrix
+        *modelMatrix
+        *vec4(pos , 1.0);
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fpeelingProjection
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fpeelingProjection = { value : `#version 300 es
+
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+layout (location=0) out vec4    outColor;
+
+in float    shade ;
+in vec3     ocolor ;
+void main() {
+    if (shade <0.5){
+       discard ;
+    }
+    outColor = vec4(ocolor,1.) ;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vpeeling
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var vpeeling = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform float       voxelSize ;
+uniform int         noVoxels;
+uniform float       alpha ;
+
+uniform sampler2D   icolor ;
+
+uniform float       minValue ;
+uniform float       maxValue ;
+uniform vec4        channelMultiplier ;
+
+uniform sampler2D   wnormals ;
+uniform sampler2D   colormap ;
+
+uniform mat4        projectionMatrix ;
+uniform mat4        modelMatrix ;
+uniform mat4        viewMatrix ;
+uniform mat4        normalMatrix ;
+
+uniform sampler2D   compressed3dCrdt ;
+uniform sampler2D   normals ;
+uniform usampler2D  compressedTexelIndex ;
+
+uniform float       shininess ;
+uniform vec4        lightColor ;
+uniform float       lightAmbientTerm ;
+uniform float       lightSpecularTerm ;
+uniform vec3        lightDirection ;
+uniform vec4        lightAmbientColor ;
+
+uniform vec4        materialColor ;
+uniform float       materialAmbientTerm ;
+uniform float       materialSpecularTerm ;
+
+uniform float cutX, cutY, cutZ, cutXDir, cutYDir, cutZDir ;
+
+#define         PI radians(180.0)
+#define v4(a)   vec4(a,a,a,1.)
+
+out float shade ;
+
+out vec4 color ;
+void main() {
+int indx = 0 ;
+vec3 vertCrds[36] ;
+
+/* ~~~~~~~~~~~~~~~~ */
+/* Front PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 1F
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+
+// 2F
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+/* ~~~~~~~~~~~~~~~~ */
+/* RIGHT PLANE      */
+/* ~~~~~~~~~~~~~~~~ */
+// 3R
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+
+// 4R
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BOTTOM PLANE     */
+/* ~~~~~~~~~~~~~~~~ */
+// 5B
+vertCrds[indx++] = vec3(1,0,0) ;  // 5
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 6B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,0,1) ;  // 2
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+
+/* ~~~~~~~~~~~~~~~~ */
+/* LEFT PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 7L
+vertCrds[indx++] = vec3(0,0,1) ;  // 1
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 8L
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* TOP PLANE        */
+/* ~~~~~~~~~~~~~~~~ */
+// 9T
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(0,1,1) ;  // 4
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+
+// 10T
+vertCrds[indx++] = vec3(1,1,1) ;  // 3
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+
+/* ~~~~~~~~~~~~~~~~ */
+/* BACK PLANE       */
+/* ~~~~~~~~~~~~~~~~ */
+// 11B
+vertCrds[indx++] = vec3(0,1,0) ;  // 8
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+
+// 12B
+vertCrds[indx++] = vec3(0,0,0) ;  // 6
+vertCrds[indx++] = vec3(1,1,0) ;  // 7
+vertCrds[indx++] = vec3(1,0,0) ;  // 5 
+
+
+
+    int  vertId  = gl_VertexID % 36  ; 
+    int  voxelId = gl_VertexID / 36 ;
+
+    shade = 1.0 ;
+
+    ivec2 isize = textureSize(compressed3dCrdt,        0 ) ;
+    ivec2 voxelIndex = ivec2( voxelId % isize.x , voxelId / isize.x ) ;
+    
+    vec4 pos4 = texelFetch(compressed3dCrdt, voxelIndex, 0 ) ;
+
+    shade =  (pos4.a > 0.5) ? 1. : 0. ;
+
+    vec3 pos =  (pos4.xyz - vec3(0.5))*2. ; 
+    vec3 ppp = pos ;
+
+    pos += voxelSize*0.005*2.*(vertCrds[vertId]-vec3(0.5)) ; 
+    
+
+    vec4  colorin   = texelFetch(  icolor, voxelIndex, 0 ) ; 
+  
+    float val = dot(colorin,channelMultiplier) ;
+    vec4 mcolor = val < minValue ? 
+        materialColor : texture( colormap,
+            vec2((val-minValue)/(maxValue-minValue),0.5) ) ;
+
+    float trasparency = 1.0 ;
+    
+    vec3    surfaceNormal = texelFetch( normals, voxelIndex , 0).xyz ;
+
+/*------------------------------------------------------------------------
+ * processing cut-planes
+ *------------------------------------------------------------------------
+ */
+   // if ( (ppp.x-cutX)*cutXDir > 0. ){
+   //   shade = 0. ;
+   //   surfaceNormal = max(vec3(cutXDir,0.,0.),surfaceNormal) ;
+   // }
+    shade = shade* ( (ppp.x-cutX)*cutXDir<0. ? 1. : 0. ) ;
+    shade = shade* ( (ppp.y-cutY)*cutYDir<0. ? 1. : 0. ) ;
+    shade = shade* ( (ppp.z-cutZ)*cutZDir<0. ? 1. : 0. ) ;
+
+/*------------------------------------------------------------------------
+ * Lighting and coloring
+ *------------------------------------------------------------------------
+ */
+    // normal direction ..................................................
+    vec3 N = normalize( 
+            vec3( normalMatrix*texelFetch( wnormals, voxelIndex, 0 )  )) ;
+
+    #define dist    (voxelSize*0.015)
+
+
+    if ( length(ppp.x - cutX)<(dist)) {
+        surfaceNormal = vec3(1,0.,0.)*cutXDir ;
+        N = surfaceNormal ;
+    }
+    if ( length(ppp.y - cutY)<(dist) ){
+        surfaceNormal = vec3(0.,1.,0.)*cutYDir ;
+        N = surfaceNormal ;
+    }
+    if ( length(ppp.z - cutZ)<(dist) ){
+        surfaceNormal = vec3(0.,0.,1.)*cutZDir ;
+        N = surfaceNormal ;
+    }
+
+    if (val < minValue){
+        if ( length(surfaceNormal)<0.99 ){
+            trasparency = 0. ;
+            shade = 0. ;
+        }else{
+            trasparency = alpha ;
+            mcolor = materialColor ;
+        }
+    }
+
+    N = (modelMatrix*vec4(N,1.)).xyz ;
+
+    // eye vector ........................................................
+    vec3 E = normalize(-(viewMatrix*modelMatrix*vec4(pos,1.)).xyz) ;
+
+    // light direction ...................................................
+    vec3 L = normalize(lightDirection) ;
+
+    // reflection direction ..............................................
+    vec3 R = reflect(L,N) ;
+    float lambertTerm = dot(N,-L) ;
+
+    // AmbientTerm .......................................................
+    vec4 Ia = v4(lightAmbientTerm) * v4(materialAmbientTerm);
+
+    // Diffuse ...........................................................
+    vec4 Id = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // SpecularTerm ......................................................
+    vec4 Is = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // calculating final color ...........................................
+    if (lambertTerm > 0.0) {
+      Id = lightColor * mcolor * lambertTerm;
+      float specular = pow( max(dot(R, E), 0.0), shininess);
+      Is = v4(lightSpecularTerm) *v4(materialSpecularTerm) 
+          * specular ;
+    }
+
+    // Final fargment color takes into account all light values that
+    // were computed within the fragment shader
+    color = vec4(vec3(Ia + Id + Is), trasparency);
+
+    // final vertex position .............................................
+    gl_Position = projectionMatrix
+        *viewMatrix
+        *modelMatrix
+        *vec4(pos , 1.0);
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fpeeling
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fpeeling = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+#define MAX_DEPTH 99999.0
+
+uniform sampler2D uDepth;
+uniform sampler2D uFrontColor;
+
+in vec4 color ;
+in float shade ;
+
+// RG32F, R - negative front depth, G - back depth
+layout(location=0) out vec2 depth;  
+layout(location=1) out vec4 frontColor;
+layout(location=2) out vec4 backColor;
+
+void main() {
+
+    if (shade<0.5){
+        discard ;
+    }
+    // -------------------------
+    // dual depth peeling
+    // -------------------------
+    float   fragDepth       = gl_FragCoord.z;   // 0 - 1
+
+    ivec2   fragCoord       = ivec2(gl_FragCoord.xy);
+    vec2    lastDepth       = texelFetch(uDepth, fragCoord, 0).rg;
+    vec4    lastFrontColor  = texelFetch(uFrontColor, fragCoord, 0);
+
+    // depth value always increases
+    // so we can use MAX blend equation
+    depth.rg = vec2(-MAX_DEPTH);
+
+    // front color always increases
+    // so we can use MAX blend equation
+    frontColor = lastFrontColor;
+
+    // back color is separately blend afterwards each pass
+    backColor = vec4(0.0);
+
+    float nearestDepth = - lastDepth.x;
+    float furthestDepth = lastDepth.y;
+    float alphaMultiplier = 1.0 - lastFrontColor.a;
+
+    if (fragDepth < nearestDepth || fragDepth > furthestDepth) {
+        // Skip this depth since it's been peeled.
+        return;
+    }
+
+    if (fragDepth > nearestDepth && fragDepth < furthestDepth) {
+        // This needs to be peeled.
+        // The ones remaining after MAX blended for 
+        // all need-to-peel will be peeled next pass.
+        depth.rg = vec2(-fragDepth, fragDepth);
+        return;
+    }
+
+    // -------------------------------------------------------------------
+    // If it reaches here, it is the layer we need to render for this pass
+    // -------------------------------------------------------------------
+    if (fragDepth == nearestDepth) {
+        frontColor.rgb += color.rgb * color.a * alphaMultiplier;
+        frontColor.a = 1.0 - alphaMultiplier * (1.0 - color.a);
+    } else {
+        backColor += color;
+    }
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * vquad
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var vquad = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+layout(location=0) in vec4 aPosition;
+
+void main() {
+    gl_Position = aPosition;
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * fbackBlend
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var fbackBlend = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform sampler2D uBackColor;
+
+out vec4 fragColor;
+void main() {
+    fragColor = texelFetch(uBackColor, ivec2(gl_FragCoord.xy), 0);
+    if (fragColor.a == 0.0) { 
+        discard;
+    }
+}` } ;
+
+/*$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ * ffinal
+ *$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+ */
+var ffinal = { value : `#version 300 es
+precision highp float;
+precision highp int ;
+precision highp isampler2D ;
+precision highp usampler2D ;
+
+
+uniform sampler2D uFrontColor;
+uniform sampler2D uBackColor;
+
+out vec4 fragColor;
+void main() {
+    ivec2   fragCoord   = ivec2(gl_FragCoord.xy);
+    vec4    frontColor  = texelFetch(uFrontColor, fragCoord, 0);
+    vec4    backColor   = texelFetch(uBackColor, fragCoord, 0);
+    float   alphaMultiplier = 1.0 - frontColor.a;
+
+    fragColor = vec4(
+            frontColor.rgb + alphaMultiplier * backColor.rgb,
+            frontColor.a + backColor.a
+    ) ;
+}` } ;
+

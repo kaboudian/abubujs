@@ -63,4 +63,19 @@
     shader2var( 'fsurfaceViewCompressedClickPosition'     
                                     , $dir . "SurfaceVisualizer/"   ) ;
 
+    // DeepVoxelizer .....................................................
+    shader2var( 'cvertex'               , $dir . "DeepVoxelizer/"   ) ;
+    shader2var( 'cfrag'                 , $dir . "DeepVoxelizer/"   ) ;
+    shader2var( 'wavefrontNormal'       , $dir . "DeepVoxelizer/"   ) ;
+    shader2var( 'clearTextureShader'    , $dir . "DeepVoxelizer/"   ) ;
+
+    shader2var( 'vpeelingProjection'    , $dir . "DeepVoxelizer/"   ) ;   
+    shader2var( 'fpeelingProjection'    , $dir . "DeepVoxelizer/"   ) ;   
+    shader2var( 'vpeeling'              , $dir . "DeepVoxelizer/"   ) ;
+    shader2var( 'fpeeling'              , $dir . "DeepVoxelizer/"   ) ;
+    shader2var( 'vquad'                 , $dir . "DeepVoxelizer/"   ) ;
+    shader2var( 'fbackBlend'            , $dir . "DeepVoxelizer/"   ) ;
+    shader2var( 'ffinal'                , $dir . "DeepVoxelizer/"   ) ;
+
+
 ?>
