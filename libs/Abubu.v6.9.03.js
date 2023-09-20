@@ -23226,8 +23226,11 @@ class DeepVoxelizer{
         this.s_peel = new Solver({
             fragmentShader  : fpeeling,
             vertexShader    : vpeeling,
-            uniforms        : this.peelUniforms( this.s_depth, this.s_front ) ,
-            targets         : this.peelTargets( this.f_depth, this.f_front, this.f_back ) ,
+            uniforms        : this.peelUniforms(    this.s_depth, 
+                                                    this.s_front ) ,
+            targets         : this.peelTargets(     this.f_depth, 
+                                                    this.f_front, 
+                                                    this.f_back ) ,
             blendEquation   : new BlendEquation('MAX') ,
             blend : true ,
             clear : false ,

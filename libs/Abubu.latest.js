@@ -14253,8 +14253,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.9.03' ;
-var updateTime = 'Mon 09 Jul 2023 11:37:28 (EDT)' ;
+var version = 'v6.9.04' ;
+var updateTime = 'Wed 20 Sep 2023 15:53:43 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -23226,8 +23226,11 @@ class DeepVoxelizer{
         this.s_peel = new Solver({
             fragmentShader  : fpeeling,
             vertexShader    : vpeeling,
-            uniforms        : this.peelUniforms( this.s_depth, this.s_front ) ,
-            targets         : this.peelTargets( this.f_depth, this.f_front, this.f_back ) ,
+            uniforms        : this.peelUniforms(    this.s_depth, 
+                                                    this.s_front ) ,
+            targets         : this.peelTargets(     this.f_depth, 
+                                                    this.f_front, 
+                                                    this.f_back ) ,
             blendEquation   : new BlendEquation('MAX') ,
             blend : true ,
             clear : false ,
@@ -23332,6 +23335,33 @@ class DeepVoxelizer{
             targets : {
                 outColor : { location : 0 , 
                                target : this.projectedCoordinates }
+            }
+        } ) ;
+/*------------------------------------------------------------------------
+ * 
+ *------------------------------------------------------------------------
+ */
+        this.compressedClickPosition = 
+            new Float32Texture(1,1, {pairable: true}) ;
+
+        // surfaceViewCompressedClickPosition ............................
+        this.surfaceViewCompressedClickPosition = new Solver({
+            fragmentShader : fsurfaceViewCompressedClickPosition.value,
+            uniforms : { 
+                clickPosition : { type : 'v2', value : [0,0] } ,
+                projectedCoordinates : 
+                    { type : 't', value : this.projectedCoordinates } ,
+                compressedTexelIndex : 
+                    { type : 't', 
+                        value : this.structure.compressedTexelIndex } ,
+                mx : { type : 'i' , value : this.structure.mx } ,
+                my : { type : 'i' , value : this.structure.my } ,
+                cwidth : { type : 'f', value : this.structure.cwidth } ,
+                cheight: { type : 'f', value : this.structure.cheight } ,
+            } ,
+            targets : { 
+                compressedClickPosition : {
+                    location : 0, target : this.compressedClickPosition }
             }
         } ) ;
 
@@ -23802,6 +23832,21 @@ class DeepVoxelizer{
         this.crdProjectionTargets.clear(0,0,0,0) ;
         this.crdProjector.render() ;
     }
+
+/*------------------------------------------------------------------------
+ * getCompressedClickPosition
+ *------------------------------------------------------------------------
+ */
+    getCompressedClickPosition(clickPosition){
+        this.surfaceViewCompressedClickPosition
+            .uniforms.clickPosition.value = clickPosition ;
+        this.surfaceViewCompressedClickPosition.render() ;
+        this.surfaceViewCompressedClickPosition.render() ;
+        var val =  this.compressedClickPosition.value ;
+
+        return [val[0],val[1]] ;
+    }
+
 /*------------------------------------------------------------------------
  * controlByGui(gelem)
  *------------------------------------------------------------------------
