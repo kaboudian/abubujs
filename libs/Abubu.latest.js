@@ -14253,8 +14253,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.9.04' ;
-var updateTime = 'Wed 20 Sep 2023 15:53:43 (EDT)' ;
+var version = 'v6.9.05' ;
+var updateTime = 'Tue 22 Oct 2024 12:02:41 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -14970,6 +14970,10 @@ class Texture{
                         this.width, this.height, 0, 
                         GL(this.format), GL(this.type), null ) ;
         gl.bindTexture(     gl.TEXTURE_2D, null             ) ;
+
+        if (this.pairable){
+            this.reader.updateSize() ;
+        }
     }
 
     get width(){
@@ -24900,6 +24904,11 @@ class TextureReader{
 
     read(){
         return this.value ;
+    }
+
+    updateSize(){
+        this._buffer = new
+            this.TypedArray(this.width*this.height*this.numberOfColors) ;
     }
 }
 
