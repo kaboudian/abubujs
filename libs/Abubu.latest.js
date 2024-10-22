@@ -14253,8 +14253,8 @@ function getColormaps(){
 };
 
 
-var version = 'v6.9.05' ;
-var updateTime = 'Tue 22 Oct 2024 12:02:41 (EDT)' ;
+var version = 'v6.9.06' ;
+var updateTime = 'Tue 22 Oct 2024 12:12:55 (EDT)' ;
 
 /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * Abubu.js     :   library for computational work
@@ -15231,6 +15231,10 @@ class Float32Texture extends Texture{
                         this.width,
                         this.height, 0, gl.RGBA, gl.FLOAT, null ) ;
         copyTexture(temp, target ) ;
+        if (this.pairable){
+            this.reader.updateSize() ;
+        }
+
     }
 }
 
@@ -15314,6 +15318,10 @@ class CanvasTexture extends Float32Texture{
         this.width = w ;
         this.height = h ;
         this.update() ;
+        if (this.pairable){
+            this.reader.updateSize() ;
+        }
+
     }
 }
         

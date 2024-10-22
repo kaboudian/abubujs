@@ -15231,6 +15231,10 @@ class Float32Texture extends Texture{
                         this.width,
                         this.height, 0, gl.RGBA, gl.FLOAT, null ) ;
         copyTexture(temp, target ) ;
+        if (this.pairable){
+            this.reader.updateSize() ;
+        }
+
     }
 }
 
@@ -15314,6 +15318,10 @@ class CanvasTexture extends Float32Texture{
         this.width = w ;
         this.height = h ;
         this.update() ;
+        if (this.pairable){
+            this.reader.updateSize() ;
+        }
+
     }
 }
         
