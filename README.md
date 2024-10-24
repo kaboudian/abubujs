@@ -8,7 +8,7 @@ The project quickly turned into a library of functions that he would use on a da
 _Abubu.js_ quickly proved to be useful in many other scientific applications and it was decided that it should be released as an Open Source package to the scientific community. It was initially released for scientific use with the publication of this [journal article](https://doi.org/10.1126/sciadv.aav6019).
 
 
-The latest version of the library can now be downloaded from [http://abubujs.org/libs/Abubu.latest.js](http://abubujs.org/libs/Abubu.latest.js). 
+The latest version of the library can now be downloaded from [https://kaboudian.github.io/abubujs/libs/Abubu.latest.js](https://kaboudian.github.io/abubujs/libs/Abubu.latest.js). 
 
 We hope that you can adopto **_Abubu.js_** in your research to accelerate the pace of your scientific computations.
 
